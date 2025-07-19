@@ -14,6 +14,8 @@
             --text-secondary: #b0b0b0;
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
         }
 
         * {
@@ -70,6 +72,28 @@
             margin-left: 10px;
         }
 
+        .ai-status {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .ai-status.available {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            display: block;
+        }
+
+        .ai-status.unavailable {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning-color);
+            color: var(--warning-color);
+            display: block;
+        }
+
         .search-section {
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
@@ -115,6 +139,12 @@
             transform: translateY(-2px);
         }
 
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .ai-btn {
             padding: 10px 20px;
             border: none;
@@ -126,6 +156,7 @@
             cursor: pointer;
             transition: all 0.2s;
             margin: 5px;
+            min-width: 120px;
         }
 
         .ai-btn:hover {
@@ -139,6 +170,11 @@
             transform: none;
         }
 
+        .ai-btn.success {
+            background: linear-gradient(45deg, var(--success-color), #34d399);
+            color: white;
+        }
+
         .gemini-output {
             background: rgba(246, 224, 94, 0.1);
             border: 2px solid var(--gemini-accent);
@@ -147,12 +183,14 @@
             margin: 15px 0;
             font-style: italic;
             line-height: 1.6;
+            animation: fadeIn 0.5s ease-in;
         }
 
         .gemini-output::before {
             content: "✨ AI Generated: ";
             font-weight: bold;
             color: var(--gemini-accent);
+            font-style: normal;
         }
 
         .loading {
@@ -167,6 +205,11 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .results-grid {
@@ -226,15 +269,40 @@
             font-size: 0.9rem;
             line-height: 1.4;
             margin-bottom: 15px;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .movie-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
         }
 
         .related-movies {
             margin-top: 30px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
         }
 
         .related-movies h3 {
             margin-bottom: 20px;
             color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
         .error {
@@ -255,6 +323,15 @@
             color: var(--gemini-accent);
         }
 
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            color: var(--success-color);
+        }
+
         @media (max-width: 768px) {
             .search-container {
                 flex-direction: column;
@@ -267,6 +344,14 @@
             .results-grid {
                 grid-template-columns: 1fr;
             }
+
+            .movie-actions {
+                justify-content: center;
+            }
+
+            .section-actions {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -275,18 +360,22 @@
         <div class="header">
             <h1>Enhanced Trakt API Explorer <span class="ai-badge">AI Powered</span></h1>
             <p>Discover movies with intelligent insights powered by Gemini AI</p>
+            <div id="aiStatus" class="ai-status">
+                <span id="aiStatusText">Checking AI availability...</span>
+            </div>
         </div>
 
         <div class="search-section">
             <div class="search-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="Search for movies..." />
-                <button onclick="searchMovies()" class="search-btn">Search</button>
+                <button id="searchBtn" onclick="searchMovies()" class="search-btn">Search</button>
             </div>
             <div id="searchResults" class="results-grid"></div>
         </div>
 
         <div id="relatedMovies" class="related-movies" style="display: none;">
-            <h3>Related Movies</h3>
+            <h3>🎬 Related Movies</h3>
+            <div id="sectionActions" class="section-actions"></div>
             <div id="relatedResults" class="results-grid"></div>
         </div>
     </div>
@@ -295,21 +384,49 @@
         const API_BASE_URL = 'http://localhost:5000/api';
         let selectedMovie = null;
         let relatedMoviesData = [];
+        let aiAvailable = false;
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showMessage(containerId, message, type = 'error') {
+            const container = document.getElementById(containerId);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            container.appendChild(messageDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
 
         // Secure API call to backend for AI features
         async function callBackendAI(endpoint, data) {
+            if (!aiAvailable) {
+                throw new Error('AI features are not available. Please check server configuration.');
+            }
+
             try {
                 const response = await fetch(`${API_BASE_URL}/ai/${endpoint}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data),
+                    timeout: 30000
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || 'AI service error');
+                    throw new Error(errorData.error || `HTTP ${response.status}: AI service error`);
                 }
 
                 return await response.json();
@@ -319,10 +436,16 @@
             }
         }
 
-        async function generateSynopsis(movieTitle, movieOverview, buttonElement) {
-            const originalText = buttonElement.innerHTML;
-            buttonElement.innerHTML = '<span class="loading"></span> Generating...';
-            buttonElement.disabled = true;
+        async function generateSynopsis(movieTitle, movieOverview, movieId) {
+            const buttonId = `synopsis-btn-${movieId}`;
+            const button = document.getElementById(buttonId);
+            const movieCard = button.closest('.movie-card');
+            
+            if (!button) return;
+
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="loading"></span> Generating...';
+            button.disabled = true;
 
             try {
                 const result = await callBackendAI('synopsis', {
@@ -330,45 +453,65 @@
                     movieOverview: movieOverview
                 });
 
-                // Find the movie card and add synopsis
-                const movieCard = buttonElement.closest('.movie-card');
-                let synopsisDiv = movieCard.querySelector('.ai-synopsis');
-                
-                if (!synopsisDiv) {
-                    synopsisDiv = document.createElement('div');
-                    synopsisDiv.className = 'ai-synopsis gemini-output';
-                    movieCard.appendChild(synopsisDiv);
+                // Remove any existing synopsis
+                const existingSynopsis = movieCard.querySelector('.ai-synopsis');
+                if (existingSynopsis) {
+                    existingSynopsis.remove();
                 }
-                
+
+                // Add new synopsis
+                const synopsisDiv = document.createElement('div');
+                synopsisDiv.className = 'ai-synopsis gemini-output';
                 synopsisDiv.textContent = result.synopsis;
-                buttonElement.style.display = 'none'; // Hide button after use
+                
+                // Insert before actions
+                const actions = movieCard.querySelector('.movie-actions');
+                movieCard.insertBefore(synopsisDiv, actions);
+
+                // Update button to show success
+                button.innerHTML = '✅ Synopsis Generated';
+                button.className = 'ai-btn success';
+                
+                // Re-enable after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = '✨ AI Synopsis';
+                    button.className = 'ai-btn';
+                    button.disabled = false;
+                }, 2000);
 
             } catch (error) {
-                const movieCard = buttonElement.closest('.movie-card');
-                let errorDiv = movieCard.querySelector('.ai-error');
-                
-                if (!errorDiv) {
-                    errorDiv = document.createElement('div');
-                    errorDiv.className = 'ai-error';
-                    movieCard.appendChild(errorDiv);
+                // Remove any existing error
+                const existingError = movieCard.querySelector('.ai-error');
+                if (existingError) {
+                    existingError.remove();
                 }
-                
+
+                // Show error
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'ai-error';
                 errorDiv.textContent = `AI Synopsis Error: ${error.message}`;
-            } finally {
-                buttonElement.innerHTML = originalText;
-                buttonElement.disabled = false;
+                
+                const actions = movieCard.querySelector('.movie-actions');
+                movieCard.insertBefore(errorDiv, actions);
+
+                // Reset button
+                button.innerHTML = originalText;
+                button.disabled = false;
             }
         }
 
-        async function generateWhyYouMightLike(buttonElement) {
+        async function generateInsights() {
             if (!selectedMovie || relatedMoviesData.length === 0) {
-                alert('Please select a movie and load related movies first.');
+                showMessage('relatedResults', 'Please select a movie and load related movies first.', 'error');
                 return;
             }
 
-            const originalText = buttonElement.innerHTML;
-            buttonElement.innerHTML = '<span class="loading"></span> Analyzing...';
-            buttonElement.disabled = true;
+            const button = document.getElementById('insights-btn');
+            if (!button) return;
+
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="loading"></span> Analyzing...';
+            button.disabled = true;
 
             try {
                 const result = await callBackendAI('insights', {
@@ -376,33 +519,39 @@
                     relatedMovies: relatedMoviesData
                 });
 
-                // Add insights to related movies section
+                // Remove any existing insights
                 const relatedSection = document.getElementById('relatedMovies');
-                let insightsDiv = relatedSection.querySelector('.ai-insights');
-                
-                if (!insightsDiv) {
-                    insightsDiv = document.createElement('div');
-                    insightsDiv.className = 'ai-insights gemini-output';
-                    relatedSection.insertBefore(insightsDiv, document.getElementById('relatedResults'));
+                const existingInsights = relatedSection.querySelector('.ai-insights');
+                if (existingInsights) {
+                    existingInsights.remove();
                 }
-                
+
+                // Add new insights
+                const insightsDiv = document.createElement('div');
+                insightsDiv.className = 'ai-insights gemini-output';
                 insightsDiv.textContent = result.insights;
-                buttonElement.style.display = 'none'; // Hide button after use
+                
+                // Insert after section actions
+                const sectionActions = document.getElementById('sectionActions');
+                sectionActions.parentNode.insertBefore(insightsDiv, sectionActions.nextSibling);
+
+                // Update button
+                button.innerHTML = '✅ Insights Generated';
+                button.className = 'ai-btn success';
+                
+                // Re-enable after 3 seconds
+                setTimeout(() => {
+                    button.innerHTML = '✨ Why You Might Like These';
+                    button.className = 'ai-btn';
+                    button.disabled = false;
+                }, 3000);
 
             } catch (error) {
-                const relatedSection = document.getElementById('relatedMovies');
-                let errorDiv = relatedSection.querySelector('.ai-error');
+                showMessage('relatedResults', `AI Insights Error: ${error.message}`, 'ai-error');
                 
-                if (!errorDiv) {
-                    errorDiv = document.createElement('div');
-                    errorDiv.className = 'ai-error';
-                    relatedSection.insertBefore(errorDiv, document.getElementById('relatedResults'));
-                }
-                
-                errorDiv.textContent = `AI Insights Error: ${error.message}`;
-            } finally {
-                buttonElement.innerHTML = originalText;
-                buttonElement.disabled = false;
+                // Reset button
+                button.innerHTML = originalText;
+                button.disabled = false;
             }
         }
 
@@ -411,7 +560,10 @@
             if (!query) return;
 
             const resultsDiv = document.getElementById('searchResults');
+            const searchBtn = document.getElementById('searchBtn');
+            
             resultsDiv.innerHTML = '<div class="loading"></div> Searching...';
+            searchBtn.disabled = true;
 
             try {
                 const response = await fetch(`${API_BASE_URL}/search/movies?query=${encodeURIComponent(query)}`);
@@ -426,23 +578,26 @@
                     const movie = item.movie;
                     const posterUrl = item.posterUrl || 'https://via.placeholder.com/300x450?text=No+Poster';
                     const rating = item.ratings ? item.ratings.rating.toFixed(1) : 'N/A';
+                    const movieId = movie.ids.trakt;
                     
                     return `
-                        <div class="movie-card" onclick="selectMovie(${movie.ids.trakt}, '${movie.title.replace(/'/g, "\\'")}', '${(movie.overview || '').replace(/'/g, "\\'")}')">
-                            <img src="${posterUrl}" alt="${movie.title}" class="movie-poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
-                            <div class="movie-title">${movie.title}</div>
+                        <div class="movie-card" onclick="selectMovie(${movieId}, '${escapeHtml(movie.title)}', '${escapeHtml(movie.overview || '')}')">
+                            <img src="${posterUrl}" alt="${escapeHtml(movie.title)}" class="movie-poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
+                            <div class="movie-title">${escapeHtml(movie.title)}</div>
                             <div class="movie-year">${movie.year || 'Unknown Year'}</div>
                             <div class="movie-rating">⭐ ${rating}</div>
-                            <div class="movie-overview">${movie.overview || 'No overview available.'}</div>
-                            <button class="ai-btn" onclick="event.stopPropagation(); generateSynopsis('${movie.title.replace(/'/g, "\\'")}', '${(movie.overview || '').replace(/'/g, "\\'")}', this)">
-                                ✨ AI Synopsis
-                            </button>
+                            <div class="movie-overview">${escapeHtml(movie.overview || 'No overview available.')}</div>
+                            <div class="movie-actions">
+                                ${aiAvailable ? `<button id="synopsis-btn-${movieId}" class="ai-btn" onclick="event.stopPropagation(); generateSynopsis('${escapeHtml(movie.title)}', '${escapeHtml(movie.overview || '')}', ${movieId})">✨ AI Synopsis</button>` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('');
 
             } catch (error) {
                 resultsDiv.innerHTML = `<div class="error">Error searching movies: ${error.message}</div>`;
+            } finally {
+                searchBtn.disabled = false;
             }
         }
 
@@ -455,7 +610,10 @@
             if (existingInsights) existingInsights.remove();
             
             const relatedDiv = document.getElementById('relatedResults');
+            const sectionActions = document.getElementById('sectionActions');
+            
             relatedDiv.innerHTML = '<div class="loading"></div> Loading related movies...';
+            sectionActions.innerHTML = '';
             relatedSection.style.display = 'block';
 
             try {
@@ -474,21 +632,23 @@
                     
                     return `
                         <div class="movie-card">
-                            <img src="${posterUrl}" alt="${movie.title}" class="movie-poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
-                            <div class="movie-title">${movie.title}</div>
+                            <img src="${posterUrl}" alt="${escapeHtml(movie.title)}" class="movie-poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
+                            <div class="movie-title">${escapeHtml(movie.title)}</div>
                             <div class="movie-year">${movie.year || 'Unknown Year'}</div>
                             <div class="movie-rating">⭐ ${rating}</div>
-                            <div class="movie-overview">${movie.overview || 'No overview available.'}</div>
+                            <div class="movie-overview">${escapeHtml(movie.overview || 'No overview available.')}</div>
                         </div>
                     `;
                 }).join('');
 
-                // Add AI insights button
-                const insightsButton = document.createElement('button');
-                insightsButton.className = 'ai-btn';
-                insightsButton.innerHTML = '✨ Why You Might Like These';
-                insightsButton.onclick = () => generateWhyYouMightLike(insightsButton);
-                relatedSection.insertBefore(insightsButton, relatedDiv);
+                // Add AI insights button if available
+                if (aiAvailable) {
+                    sectionActions.innerHTML = `
+                        <button id="insights-btn" class="ai-btn" onclick="generateInsights()">
+                            ✨ Why You Might Like These
+                        </button>
+                    `;
+                }
 
             } catch (error) {
                 relatedDiv.innerHTML = `<div class="error">Error loading related movies: ${error.message}</div>`;
@@ -504,16 +664,27 @@
 
         // Check AI availability on load
         window.addEventListener('load', async () => {
+            const statusDiv = document.getElementById('aiStatus');
+            const statusText = document.getElementById('aiStatusText');
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
                 const health = await response.json();
                 
-                if (!health.gemini_api_configured) {
-                    console.warn('Gemini AI not configured - AI features will be disabled');
-                    // Could show a notice to user about AI features being unavailable
+                if (health.gemini_api_configured) {
+                    aiAvailable = true;
+                    statusDiv.className = 'ai-status available';
+                    statusText.textContent = '✅ AI Features Available - Enhanced movie insights powered by Gemini AI';
+                } else {
+                    aiAvailable = false;
+                    statusDiv.className = 'ai-status unavailable';
+                    statusText.textContent = '⚠️ AI Features Unavailable - Add GEMINI_API_KEY to enable AI-powered insights';
                 }
             } catch (error) {
                 console.error('Could not check AI availability:', error);
+                aiAvailable = false;
+                statusDiv.className = 'ai-status unavailable';
+                statusText.textContent = '❌ Cannot connect to server - Please ensure the backend is running';
             }
         });
     </script>
