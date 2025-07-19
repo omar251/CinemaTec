@@ -3,6 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 const helmet = require('helmet');
 const compression = require('compression');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 // Configure logging
@@ -23,6 +24,7 @@ app.use(express.json());
 // API Configuration
 const TRAKT_API_KEY = process.env.TRAKT_API_KEY;
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const TRAKT_BASE_URL = "https://api.trakt.tv";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
@@ -35,6 +37,10 @@ if (!TRAKT_API_KEY) {
 
 if (!TMDB_API_KEY) {
   log.warn("TMDB_API_KEY not provided - poster images will not be available");
+}
+
+if (!GEMINI_API_KEY) {
+  log.warn("GEMINI_API_KEY not provided - AI features will not be available");
 }
 
 // HTTP client configurations
@@ -55,6 +61,20 @@ const tmdbClient = axios.create({
     api_key: TMDB_API_KEY
   }
 });
+
+// Initialize Gemini AI client
+let genAI = null;
+let model = null;
+if (GEMINI_API_KEY) {
+  try {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    log.info("🤖 Gemini AI initialized successfully");
+  } catch (error) {
+    log.error(`Failed to initialize Gemini AI: ${error.message}`);
+    model = null;
+  }
+}
 
 // Helper functions
 async function makeTraktRequest(endpoint, params = {}) {
@@ -316,12 +336,89 @@ app.get('/api/movies/:traktId/related/fast', async (req, res) => {
   }
 });
 
+// AI Endpoints
+
+// Generate movie synopsis using Gemini AI
+app.post('/api/ai/synopsis', async (req, res) => {
+  if (!model) {
+    return res.status(503).json({ error: 'AI service not available - Gemini API key not configured' });
+  }
+
+  const { movieTitle, movieOverview } = req.body;
+  
+  if (!movieTitle) {
+    return res.status(400).json({ error: 'Movie title is required' });
+  }
+
+  try {
+    const prompt = `Generate a compelling and slightly expanded synopsis for the movie '${movieTitle}' which is about '${movieOverview || 'No overview available'}'. Keep it concise but engaging, around 2-3 sentences.`;
+    
+    log.info(`Generating synopsis for: ${movieTitle}`);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    log.info(`Generated synopsis for movie: ${movieTitle}`);
+    res.json({ synopsis: text });
+    
+  } catch (error) {
+    log.error(`Error generating synopsis for ${movieTitle}: ${error.message}`);
+    if (error.message.includes('API_KEY_INVALID')) {
+      res.status(401).json({ error: 'Invalid Gemini API key' });
+    } else if (error.message.includes('QUOTA_EXCEEDED')) {
+      res.status(429).json({ error: 'API quota exceeded' });
+    } else {
+      res.status(500).json({ error: `Failed to generate synopsis: ${error.message}` });
+    }
+  }
+});
+
+// Generate insights about why user might like related movies
+app.post('/api/ai/insights', async (req, res) => {
+  if (!model) {
+    return res.status(503).json({ error: 'AI service not available - Gemini API key not configured' });
+  }
+
+  const { selectedMovie, relatedMovies } = req.body;
+  
+  if (!selectedMovie || !relatedMovies || relatedMovies.length === 0) {
+    return res.status(400).json({ error: 'Selected movie and related movies are required' });
+  }
+
+  try {
+    const selectedTitle = selectedMovie.title;
+    const selectedOverview = selectedMovie.overview || 'a movie with interesting themes';
+    const relatedTitles = relatedMovies.map(movie => movie.title).join(', ');
+    
+    const prompt = `The movie '${selectedTitle}' is known for its themes and plot like: '${selectedOverview}'. Here are some related movies: ${relatedTitles}. Explain why someone who liked '${selectedTitle}' might enjoy these related movies, highlighting common themes, genres, or directorial styles. Be insightful and encouraging, around 3-4 sentences.`;
+    
+    log.info(`Generating insights for: ${selectedTitle}`);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    log.info(`Successfully generated insights for movie: ${selectedTitle}`);
+    res.json({ insights: text });
+    
+  } catch (error) {
+    log.error(`Error generating insights for ${selectedTitle}: ${error.message}`);
+    if (error.message.includes('API_KEY_INVALID')) {
+      res.status(401).json({ error: 'Invalid Gemini API key' });
+    } else if (error.message.includes('QUOTA_EXCEEDED')) {
+      res.status(429).json({ error: 'Gemini API quota exceeded' });
+    } else {
+      res.status(500).json({ error: `Failed to generate insights: ${error.message}` });
+    }
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     trakt_api_configured: !!TRAKT_API_KEY,
     tmdb_api_configured: !!TMDB_API_KEY,
+    gemini_api_configured: !!GEMINI_API_KEY,
     optimization: 'enabled',
     runtime: 'Node.js'
   });

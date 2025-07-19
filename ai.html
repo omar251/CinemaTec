@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Enhanced Trakt API Explorer</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --primary-bg: #0f172a;
+                --secondary-bg: #1e293b;
+                --card-bg: #334155;
+                --accent: #3b82f6;
+                --accent-hover: #2563eb;
+                --text-primary: #f1f5f9;
+                --text-secondary: #cbd5e1;
+                --text-muted: #94a3b8;
+                --success: #10b981;
+                --warning: #f59e0b;
+                --error: #ef4444;
+                --gemini-accent: #f6e05e; /* Yellow for Gemini features */
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Inter", sans-serif;
+                background: linear-gradient(
+                    135deg,
+                    var(--primary-bg) 0%,
+                    #1e293b 100%
+                );
+                color: var(--text-primary);
+                min-height: 100vh;
+                margin: 0;
+                padding: 0;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+
+            .glass-card {
+                background: rgba(51, 65, 85, 0.8);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 1rem;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            }
+
+            .input-group {
+                position: relative;
+            }
+
+            .input-field {
+                background: rgba(30, 41, 59, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                color: var(--text-primary);
+                border-radius: 0.75rem;
+                padding: 1rem 1.25rem;
+                width: 100%;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+            }
+
+            .input-field:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+
+            .btn {
+                background: linear-gradient(
+                    135deg,
+                    var(--accent) 0%,
+                    var(--accent-hover) 100%
+                );
+                color: white;
+                padding: 1rem 2rem;
+                border-radius: 0.75rem;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+            }
+
+            .btn:active {
+                transform: translateY(0);
+            }
+
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .movie-card {
+                background: var(--card-bg);
+                border-radius: 1rem;
+                padding: 1.5rem;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .movie-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                border-color: var(--accent);
+            }
+
+            .movie-card.selected {
+                background: linear-gradient(
+                    135deg,
+                    var(--accent) 0%,
+                    var(--accent-hover) 100%
+                );
+                border-color: var(--accent);
+            }
+
+            .movie-poster {
+                width: 100%;
+                height: 300px;
+                object-fit: cover;
+                border-radius: 0.75rem;
+                background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 3rem;
+                color: var(--text-muted);
+            }
+
+            .poster-placeholder {
+                background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-muted);
+                font-size: 2rem;
+            }
+
+            .rating-badge {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                background: linear-gradient(
+                    135deg,
+                    var(--warning) 0%,
+                    #f97316 100%
+                );
+                color: white;
+                padding: 0.5rem 1rem;
+                border-radius: 2rem;
+                font-weight: 600;
+                font-size: 0.875rem;
+            }
+
+            .genre-tag {
+                background: rgba(59, 130, 246, 0.2);
+                color: var(--accent);
+                padding: 0.25rem 0.75rem;
+                border-radius: 1rem;
+                font-size: 0.75rem;
+                font-weight: 500;
+                margin-right: 0.5rem;
+                margin-bottom: 0.5rem;
+                display: inline-block;
+            }
+
+            .loading-spinner {
+                border: 3px solid rgba(255, 255, 255, 0.2);
+                border-top: 3px solid var(--accent);
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .error-message {
+                color: var(--error);
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                padding: 1rem;
+                border-radius: 0.75rem;
+                margin-top: 1rem;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+                margin-top: 1rem;
+            }
+
+            .stat-card {
+                background: rgba(30, 41, 59, 0.5);
+                padding: 1rem;
+                border-radius: 0.75rem;
+                text-align: center;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--accent);
+            }
+
+            .stat-label {
+                font-size: 0.875rem;
+                color: var(--text-muted);
+                margin-top: 0.25rem;
+            }
+
+            .filter-tabs {
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 2rem;
+                flex-wrap: wrap;
+            }
+
+            .filter-tab {
+                padding: 0.75rem 1.5rem;
+                background: rgba(30, 41, 59, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 2rem;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: 500;
+            }
+
+            .filter-tab.active {
+                background: var(--accent);
+                color: white;
+                border-color: var(--accent);
+            }
+
+            .filter-tab:hover {
+                background: var(--accent);
+                color: white;
+            }
+
+            .movie-details {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 2rem;
+                align-items: start;
+            }
+
+            .movie-info {
+                flex: 1;
+            }
+
+            .pulse {
+                animation: pulse 2s infinite;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .gemini-output {
+                background: rgba(
+                    58,
+                    71,
+                    90,
+                    0.8
+                ); /* Darker background for AI content */
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+                margin-top: 1.5rem;
+                border-left: 4px solid var(--gemini-accent); /* Yellow border for AI content */
+                color: var(--text-primary);
+                line-height: 1.6;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            }
+
+            @media (max-width: 768px) {
+                .movie-details {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .filter-tabs {
+                    flex-direction: column;
+                }
+
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="glass-card p-8 mb-8">
+                <h1
+                    class="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"
+                >
+                    Enhanced Trakt Explorer
+                </h1>
+                <p class="text-center text-gray-400 mb-8">
+                    Discover movies and find your next favorite film
+                </p>
+
+                <div class="input-group mb-6">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input
+                            type="text"
+                            id="movieTitle"
+                            placeholder="Search for movies..."
+                            class="input-field flex-grow"
+                        />
+                        <button id="searchMovieBtn" class="btn shrink-0">
+                            <span id="searchBtnText">Search</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    id="loadingSearch"
+                    class="hidden flex justify-center items-center py-8"
+                >
+                    <div class="loading-spinner"></div>
+                    <span class="ml-3 text-lg">Searching movies...</span>
+                </div>
+                <div id="searchError" class="error-message hidden"></div>
+            </div>
+
+            <div id="searchResults" class="hidden">
+                <div class="glass-card p-6 mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
+                        Search Results
+                    </h2>
+                    <div class="filter-tabs">
+                        <div class="filter-tab active" data-sort="relevance">
+                            Relevance
+                        </div>
+                        <div class="filter-tab" data-sort="year">Year</div>
+                        <div class="filter-tab" data-sort="rating">Rating</div>
+                        <div class="filter-tab" data-sort="title">Title</div>
+                    </div>
+                    <div
+                        id="movieList"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    >
+                        <!-- Search results will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectedMovieDetails" class="hidden">
+                <div class="glass-card p-6 mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
+                        Movie Details
+                    </h2>
+                    <div id="movieDetailsContent">
+                        <!-- Movie details will be loaded here -->
+                    </div>
+                    <!-- New Gemini Feature: Synopsis -->
+                    <div class="mt-6">
+                        <button
+                            id="generateSynopsisBtn"
+                            class="btn w-full sm:w-auto"
+                        >
+                            ✨ Generate Synopsis
+                        </button>
+                        <div
+                            id="loadingSynopsis"
+                            class="hidden flex justify-center items-center py-2 mt-4"
+                        >
+                            <div class="loading-spinner"></div>
+                            <span class="ml-3 text-lg"
+                                >Generating synopsis...</span
+                            >
+                        </div>
+                        <div
+                            id="synopsisError"
+                            class="error-message hidden"
+                        ></div>
+                        <div
+                            id="synopsisOutput"
+                            class="gemini-output hidden"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="relatedMoviesSection" class="hidden">
+                <div class="glass-card p-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
+                        Related Movies
+                    </h2>
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button id="getRelatedMoviesBtn" class="btn">
+                            Get Recommendations
+                        </button>
+                        <!-- New Gemini Feature: Why You Might Like These -->
+                        <button id="whyYouMightLikeBtn" class="btn">
+                            ✨ Why You Might Like These
+                        </button>
+                    </div>
+
+                    <div
+                        id="loadingRelated"
+                        class="hidden flex justify-center items-center py-8"
+                    >
+                        <div class="loading-spinner"></div>
+                        <span class="ml-3 text-lg"
+                            >Finding related movies...</span
+                        >
+                    </div>
+                    <div id="relatedError" class="error-message hidden"></div>
+                    <div
+                        id="relatedMoviesList"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    >
+                        <!-- Related movies will be loaded here -->
+                    </div>
+                    <div
+                        id="loadingWhyLike"
+                        class="hidden flex justify-center items-center py-2 mt-4"
+                    >
+                        <div class="loading-spinner"></div>
+                        <span class="ml-3 text-lg">Generating insights...</span>
+                    </div>
+                    <div id="whyLikeError" class="error-message hidden"></div>
+                    <div id="whyLikeOutput" class="gemini-output hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // API Configuration - Now using secure backend
+            const API_BASE_URL = "http://localhost:5000/api";
+
+            // Gemini API Configuration
+            const GEMINI_API_KEY = "process.env.GEMINI_API_KEY"; // Leave empty, Canvas will provide it
+            const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+            // DOM Elements
+            const movieTitleInput = document.getElementById("movieTitle");
+            const searchMovieBtn = document.getElementById("searchMovieBtn");
+            const searchBtnText = document.getElementById("searchBtnText");
+            const loadingSearch = document.getElementById("loadingSearch");
+            const searchError = document.getElementById("searchError");
+            const searchResults = document.getElementById("searchResults");
+            const movieList = document.getElementById("movieList");
+            const selectedMovieDetails = document.getElementById(
+                "selectedMovieDetails",
+            );
+            const movieDetailsContent = document.getElementById(
+                "movieDetailsContent",
+            );
+            const relatedMoviesSection = document.getElementById(
+                "relatedMoviesSection",
+            );
+            const getRelatedMoviesBtn = document.getElementById(
+                "getRelatedMoviesBtn",
+            );
+            const loadingRelated = document.getElementById("loadingRelated");
+            const relatedError = document.getElementById("relatedError");
+            const relatedMoviesList =
+                document.getElementById("relatedMoviesList");
+
+            // Gemini specific elements
+            const generateSynopsisBtn = document.getElementById(
+                "generateSynopsisBtn",
+            );
+            const loadingSynopsis = document.getElementById("loadingSynopsis");
+            const synopsisError = document.getElementById("synopsisError");
+            const synopsisOutput = document.getElementById("synopsisOutput");
+            const whyYouMightLikeBtn =
+                document.getElementById("whyYouMightLikeBtn");
+            const loadingWhyLike = document.getElementById("loadingWhyLike");
+            const whyLikeError = document.getElementById("whyLikeError");
+            const whyLikeOutput = document.getElementById("whyLikeOutput");
+
+            let selectedMovieData = null; // Stores the full movie object of the selected movie
+            let searchResultsData = [];
+            let currentSortBy = "relevance";
+            let currentRelatedMovies = []; // Stores the list of related movies fetched
+
+            /**
+             * Fetches data from the backend API.
+             */
+            async function fetchBackendApi(
+                endpoint,
+                params = new URLSearchParams(),
+            ) {
+                const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(
+                        `HTTP error! Status: ${response.status}, Message: ${errorData}`,
+                    );
+                }
+                return response.json();
+            }
+
+            /**
+             * Calls the Gemini API to generate text.
+             * @param {string} prompt - The prompt for the LLM.
+             * @returns {Promise<string>} - The generated text.
+             */
+            async function callGeminiApi(prompt) {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+
+                const response = await fetch(GEMINI_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                const result = await response.json();
+                if (
+                    result.candidates &&
+                    result.candidates.length > 0 &&
+                    result.candidates[0].content &&
+                    result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0
+                ) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error(
+                        "Gemini API did not return expected content.",
+                    );
+                }
+            }
+
+            /**
+             * Searches for movies based on the input title.
+             */
+            async function searchMovie() {
+                const title = movieTitleInput.value.trim();
+                if (!title) {
+                    displayError(searchError, "Please enter a movie title.");
+                    return;
+                }
+
+                // Update button state
+                searchMovieBtn.disabled = true;
+                searchBtnText.textContent = "Searching...";
+
+                // Clear previous results
+                clearResults();
+                loadingSearch.classList.remove("hidden");
+
+                try {
+                    const params = new URLSearchParams({ query: title });
+                    const data = await fetchBackendApi(
+                        "/search/movies",
+                        params,
+                    );
+
+                    loadingSearch.classList.add("hidden");
+
+                    if (data && data.length > 0) {
+                        searchResultsData = data.filter((item) => item.movie);
+                        displaySearchResults();
+                        searchResults.classList.remove("hidden");
+                    } else {
+                        displayError(
+                            searchError,
+                            "No movies found for your search.",
+                        );
+                    }
+                } catch (error) {
+                    loadingSearch.classList.add("hidden");
+                    displayError(
+                        searchError,
+                        `Error searching for movies: ${error.message}`,
+                    );
+                    console.error("Search error:", error);
+                } finally {
+                    searchMovieBtn.disabled = false;
+                    searchBtnText.textContent = "Search";
+                }
+            }
+
+            /**
+             * Displays search results with enhanced information.
+             */
+            function displaySearchResults() {
+                movieList.innerHTML = "";
+
+                // Sort results
+                const sortedResults = [...searchResultsData].sort((a, b) => {
+                    switch (currentSortBy) {
+                        case "year":
+                            return (b.movie.year || 0) - (a.movie.year || 0);
+                        case "rating":
+                            return (
+                                (b.ratings?.rating || 0) -
+                                (a.ratings?.rating || 0)
+                            );
+                        case "title":
+                            return a.movie.title.localeCompare(b.movie.title);
+                        default:
+                            return 0; // Keep original order for relevance
+                    }
+                });
+
+                sortedResults.forEach((item) => {
+                    const movie = item.movie;
+                    const movieCard = document.createElement("div");
+                    movieCard.className = "movie-card fade-in";
+
+                    const rating = item.ratings?.rating || 0;
+                    const votes = item.stats?.votes || 0;
+                    const watchers = item.stats?.watchers || 0;
+                    const posterUrl = item.posterUrl;
+
+                    movieCard.innerHTML = `
+                ${rating > 0 ? `<div class="rating-badge">★ ${rating.toFixed(1)}</div>` : ""}
+                <div class="movie-poster ${!posterUrl ? "poster-placeholder" : ""}" style="height: 200px; margin-bottom: 1rem;">
+                    ${
+                        posterUrl
+                            ? `<img src="${posterUrl}" alt="${movie.title}" class="movie-poster">`
+                            : `<div style="font-size: 3rem;">🎬</div>`
+                    }
+                </div>
+                <div class="movie-info">
+                    <h3 class="text-xl font-semibold text-blue-200 mb-2">${movie.title}</h3>
+                    <p class="text-gray-400 mb-2">${movie.year || "Unknown"}</p>
+                    ${movie.overview ? `<p class="text-gray-300 text-sm mb-3 line-clamp-3">${movie.overview.substring(0, 120)}...</p>` : ""}
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${votes}</div>
+                            <div class="stat-label">Votes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${watchers}</div>
+                            <div class="stat-label">Watchers</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                    // Store full movie data in dataset for easy access for Gemini features
+                    movieCard.dataset.movieData = JSON.stringify(item);
+                    movieCard.addEventListener(
+                        "click",
+                        () => selectMovie(movieCard, item), // Pass the full item
+                    );
+                    movieList.appendChild(movieCard);
+                });
+            }
+
+            /**
+             * Selects a movie and displays detailed information.
+             * @param {HTMLElement} cardElement - The clicked movie card element.
+             * @param {Object} movieData - The full movie data object (including movie, ratings, stats, posterUrl).
+             */
+            async function selectMovie(cardElement, movieData) {
+                // Update card selection
+                document.querySelectorAll(".movie-card").forEach((card) => {
+                    card.classList.remove("selected");
+                });
+                cardElement.classList.add("selected");
+
+                selectedMovieData = movieData; // Store the full movie object
+
+                // Display detailed movie information
+                await displayMovieDetails(movieData);
+
+                // Show related movies section and reset its content
+                relatedMoviesSection.classList.remove("hidden");
+                relatedMoviesList.innerHTML = "";
+                currentRelatedMovies = []; // Clear previous related movies data
+                hideError(relatedError);
+                hideError(whyLikeError); // Hide why like error
+                hideOutput(whyLikeOutput); // Hide why like output
+
+                // Show synopsis button and hide its previous output/error
+                generateSynopsisBtn.classList.remove("hidden");
+                hideError(synopsisError);
+                hideOutput(synopsisOutput);
+                whyYouMightLikeBtn.classList.add("hidden"); // Hide until related movies are fetched
+            }
+
+            /**
+             * Displays detailed movie information.
+             */
+            async function displayMovieDetails(movieData) {
+                const movie = movieData.movie;
+
+                try {
+                    // Get additional movie details (e.g., tagline, full overview, genres)
+                    // This call is to get the full details, as search results might be truncated
+                    const movieFullDetails = await fetchBackendApi(
+                        `/movies/${movie.ids.trakt}`,
+                    );
+
+                    movieDetailsContent.innerHTML = `
+                <div class="movie-details">
+                    <div class="movie-poster" style="width: 200px; height: 300px;">
+                        ${
+                            movieData.posterUrl
+                                ? `<img src="${movieData.posterUrl}" alt="${movie.title}" class="movie-poster">`
+                                : `<div class="poster-placeholder">🎬</div>`
+                        }
+                    </div>
+                    <div class="movie-info">
+                        <h3 class="text-3xl font-bold text-blue-200 mb-2">${movie.title}</h3>
+                        <p class="text-xl text-gray-400 mb-4">${movie.year || "Unknown"}</p>
+
+                        ${movieFullDetails.tagline ? `<p class="text-lg text-blue-300 italic mb-4">"${movieFullDetails.tagline}"</p>` : ""}
+
+                        <div class="stats-grid mb-4">
+                            <div class="stat-card">
+                                <div class="stat-value">${movieData.ratings?.rating ? movieData.ratings.rating.toFixed(1) : "N/A"}</div>
+                                <div class="stat-label">Rating</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${movieFullDetails.runtime || "N/A"}</div>
+                                <div class="stat-label">Runtime (min)</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${movieData.stats?.watchers || 0}</div>
+                                <div class="stat-label">Watchers</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${movieData.stats?.votes || 0}</div>
+                                <div class="stat-label">Votes</div>
+                            </div>
+                        </div>
+
+                        ${movieFullDetails.overview ? `<p class="text-gray-300 mb-4">${movieFullDetails.overview}</p>` : ""}
+
+                        ${
+                            movieFullDetails.genres &&
+                            movieFullDetails.genres.length > 0
+                                ? `
+                            <div class="mb-4">
+                                <h4 class="text-lg font-semibold mb-2">Genres:</h4>
+                                <div>
+                                    ${movieFullDetails.genres.map((genre) => `<span class="genre-tag">${genre}</span>`).join("")}
+                                </div>
+                            </div>
+                        `
+                                : ""
+                        }
+
+                        <div class="text-sm text-gray-500">
+                            <p>Trakt ID: ${movie.ids.trakt}</p>
+                            ${movie.ids.imdb ? `<p>IMDB ID: ${movie.ids.imdb}</p>` : ""}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                    selectedMovieDetails.classList.remove("hidden");
+                } catch (error) {
+                    console.error("Error displaying movie details:", error);
+                    // Fallback to basic info if detailed fetch fails
+                    movieDetailsContent.innerHTML = `
+                    <p class="text-xl font-bold text-blue-200 mb-2">${movie.title}</p>
+                    <p class="text-gray-400 mb-2">${movie.year || "Unknown"}</p>
+                    <p class="text-red-400">Could not load full movie details.</p>
+                `;
+                    selectedMovieDetails.classList.remove("hidden");
+                }
+            }
+
+            /**
+             * Fetches and displays related movies.
+             */
+            async function getRelatedMovies() {
+                if (!selectedMovieData) {
+                    displayError(
+                        relatedError,
+                        "Please select a movie from the search results first.",
+                    );
+                    return;
+                }
+
+                relatedMoviesList.innerHTML = "";
+                hideError(relatedError);
+                hideError(whyLikeError); // Clear why like error
+                hideOutput(whyLikeOutput); // Clear why like output
+                loadingRelated.classList.remove("hidden");
+                whyYouMightLikeBtn.classList.add("hidden"); // Hide until related movies are loaded
+
+                try {
+                    const data = await fetchBackendApi(
+                        `/movies/${selectedMovieData.movie.ids.trakt}/related`,
+                    );
+                    loadingRelated.classList.add("hidden");
+
+                    if (data && data.length > 0) {
+                        currentRelatedMovies = data; // Store related movies for Gemini feature
+                        whyYouMightLikeBtn.classList.remove("hidden"); // Show why you might like button
+
+                        data.forEach((movie) => {
+                            const movieCard = document.createElement("div");
+                            movieCard.className = "movie-card fade-in";
+                            movieCard.innerHTML = `
+                        ${movie.rating > 0 ? `<div class="rating-badge">★ ${movie.rating.toFixed(1)}</div>` : ""}
+                        <div class="movie-poster ${!movie.posterUrl ? "poster-placeholder" : ""}" style="height: 200px; margin-bottom: 1rem;">
+                            ${
+                                movie.posterUrl
+                                    ? `<img src="${movie.posterUrl}" alt="${movie.title}" class="movie-poster">`
+                                    : `<div style="font-size: 3rem;">🎬</div>`
+                            }
+                        </div>
+                        <div class="movie-info">
+                            <h3 class="text-xl font-semibold text-blue-200 mb-2">${movie.title}</h3>
+                            <p class="text-gray-400 mb-2">${movie.year || "Unknown"}</p>
+                            ${movie.overview ? `<p class="text-gray-300 text-sm">${movie.overview.substring(0, 100)}...</p>` : ""}
+                        </div>
+                    `;
+                            relatedMoviesList.appendChild(movieCard);
+                        });
+                    } else {
+                        displayError(
+                            relatedError,
+                            "No related movies found for the selected movie.",
+                        );
+                        whyYouMightLikeBtn.classList.add("hidden"); // Hide if no related movies
+                    }
+                } catch (error) {
+                    loadingRelated.classList.add("hidden");
+                    displayError(
+                        relatedError,
+                        `Error fetching related movies: ${error.message}`,
+                    );
+                    console.error("Related movies error:", error);
+                    whyYouMightLikeBtn.classList.add("hidden"); // Hide if error
+                }
+            }
+
+            /**
+             * Generates a synopsis for the selected movie using Gemini API.
+             */
+            async function generateSynopsis() {
+                if (!selectedMovieData) {
+                    displayError(
+                        synopsisError,
+                        "Please select a movie first to generate a synopsis.",
+                    );
+                    return;
+                }
+
+                hideError(synopsisError);
+                hideOutput(synopsisOutput);
+                loadingSynopsis.classList.remove("hidden");
+
+                const movieTitle = selectedMovieData.movie.title;
+                const movieOverview =
+                    selectedMovieData.movie.overview ||
+                    "No overview available from Trakt.";
+
+                const prompt = `Generate a compelling and slightly expanded synopsis for the movie '${movieTitle}' which is about '${movieOverview}'. Keep it concise but engaging.`;
+
+                try {
+                    const generatedText = await callGeminiApi(prompt);
+                    loadingSynopsis.classList.add("hidden");
+                    displayOutput(synopsisOutput, generatedText);
+                } catch (error) {
+                    loadingSynopsis.classList.add("hidden");
+                    displayError(
+                        synopsisError,
+                        `Error generating synopsis: ${error.message}`,
+                    );
+                    console.error("Gemini synopsis error:", error);
+                }
+            }
+
+            /**
+             * Generates an explanation of why the user might like the related movies using Gemini API.
+             */
+            async function generateWhyYouMightLike() {
+                if (!selectedMovieData || currentRelatedMovies.length === 0) {
+                    displayError(
+                        whyLikeError,
+                        "Please select a movie and fetch related movies first.",
+                    );
+                    return;
+                }
+
+                hideError(whyLikeError);
+                hideOutput(whyLikeOutput);
+                loadingWhyLike.classList.remove("hidden");
+
+                const selectedMovieTitle = selectedMovieData.movie.title;
+                const selectedMovieOverview =
+                    selectedMovieData.movie.overview ||
+                    "a movie with interesting themes";
+                const relatedMovieTitles = currentRelatedMovies
+                    .map((movie) => movie.title)
+                    .join(", ");
+
+                const prompt = `The movie '${selectedMovieTitle}' is known for its themes and plot like: '${selectedMovieOverview}'. Here are some related movies: ${relatedMovieTitles}. Explain why someone who liked '${selectedMovieTitle}' might enjoy these related movies, highlighting common themes, genres, or directorial styles. Be insightful and encouraging.`;
+
+                try {
+                    const generatedText = await callGeminiApi(prompt);
+                    loadingWhyLike.classList.add("hidden");
+                    displayOutput(whyLikeOutput, generatedText);
+                } catch (error) {
+                    loadingWhyLike.classList.add("hidden");
+                    displayError(
+                        whyLikeError,
+                        `Error generating insights: ${error.message}`,
+                    );
+                    console.error("Gemini why you might like error:", error);
+                }
+            }
+
+            /**
+             * Clears all results and resets the interface.
+             */
+            function clearResults() {
+                movieList.innerHTML = "";
+                relatedMoviesList.innerHTML = "";
+                movieDetailsContent.innerHTML = "";
+                searchResults.classList.add("hidden");
+                selectedMovieDetails.classList.add("hidden");
+                relatedMoviesSection.classList.add("hidden");
+                selectedMovieData = null; // Reset selected movie data
+                currentRelatedMovies = []; // Reset related movies data
+                hideError(searchError);
+                hideError(relatedError);
+                hideError(synopsisError);
+                hideOutput(synopsisOutput);
+                hideError(whyLikeError);
+                hideOutput(whyLikeOutput);
+                generateSynopsisBtn.classList.add("hidden"); // Hide buttons
+                whyYouMightLikeBtn.classList.add("hidden");
+            }
+
+            /**
+             * Displays an error message.
+             */
+            function displayError(element, message) {
+                element.textContent = message;
+                element.classList.remove("hidden");
+            }
+
+            /**
+             * Hides an error message.
+             */
+            function hideError(element) {
+                element.classList.add("hidden");
+                element.textContent = "";
+            }
+
+            /**
+             * Displays generated text in a specified output element.
+             * @param {HTMLElement} element - The DOM element to display the output.
+             * @param {string} text - The text to display.
+             */
+            function displayOutput(element, text) {
+                element.textContent = text;
+                element.classList.remove("hidden");
+            }
+
+            /**
+             * Hides generated text in a specified output element.
+             * @param {HTMLElement} element - The DOM element to hide the output.
+             */
+            function hideOutput(element) {
+                element.classList.add("hidden");
+                element.textContent = "";
+            }
+
+            // Event Listeners
+            searchMovieBtn.addEventListener("click", searchMovie);
+            movieTitleInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    searchMovie();
+                }
+            });
+            getRelatedMoviesBtn.addEventListener("click", getRelatedMovies);
+            generateSynopsisBtn.addEventListener("click", generateSynopsis);
+            whyYouMightLikeBtn.addEventListener(
+                "click",
+                generateWhyYouMightLike,
+            );
+
+            // Filter tabs
+            document.querySelectorAll(".filter-tab").forEach((tab) => {
+                tab.addEventListener("click", (e) => {
+                    document
+                        .querySelectorAll(".filter-tab")
+                        .forEach((t) => t.classList.remove("active"));
+                    e.target.classList.add("active");
+                    currentSortBy = e.target.dataset.sort;
+                    displaySearchResults();
+                });
+            });
+
+            // Check backend health on load
+            async function checkBackendHealth() {
+                try {
+                    const health = await fetchBackendApi("/health");
+                    if (!health.trakt_api_configured) {
+                        displayError(
+                            searchError,
+                            "Backend is not properly configured. Please check your API keys.",
+                        );
+                    }
+                } catch (error) {
+                    displayError(
+                        searchError,
+                        "Cannot connect to backend. Please make sure the backend server is running on " +
+                            API_BASE_URL,
+                    );
+                }
+            }
+
+            // Check backend on load
+            checkBackendHealth();
+        </script>
+    </body>
+</html>
