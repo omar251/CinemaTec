@@ -305,6 +305,38 @@
             flex-wrap: wrap;
         }
 
+        .breadcrumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .breadcrumb-item {
+            display: inline-block;
+            color: var(--text-secondary);
+            margin-right: 5px;
+        }
+
+        .breadcrumb-item.current {
+            color: var(--gemini-accent);
+            font-weight: bold;
+        }
+
+        .breadcrumb-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb-link:hover {
+            color: var(--gemini-accent);
+            text-decoration: underline;
+        }
+
         .error {
             background: rgba(233, 69, 96, 0.1);
             border: 1px solid var(--accent-color);
@@ -375,6 +407,7 @@
 
         <div id="relatedMovies" class="related-movies" style="display: none;">
             <h3>🎬 Related Movies</h3>
+            <div id="breadcrumb" class="breadcrumb" style="display: none;"></div>
             <div id="sectionActions" class="section-actions"></div>
             <div id="relatedResults" class="results-grid"></div>
         </div>
@@ -385,6 +418,7 @@
         let selectedMovie = null;
         let relatedMoviesData = [];
         let aiAvailable = false;
+        let movieHistory = []; // Track exploration path
 
         // Utility functions
         function escapeHtml(text) {
@@ -601,8 +635,20 @@
             }
         }
 
-        async function selectMovie(traktId, title, overview) {
-            selectedMovie = { title, overview };
+        async function selectMovie(traktId, title, overview, addToHistory = true) {
+            selectedMovie = { title, overview, traktId };
+            
+            // Add to history if this is a new selection
+            if (addToHistory) {
+                movieHistory.push({ traktId, title, overview });
+            }
+            
+            // Update section title to show current movie
+            const sectionTitle = document.querySelector('#relatedMovies h3');
+            sectionTitle.innerHTML = `🎬 Movies Related to "${escapeHtml(title)}"`;
+            
+            // Update breadcrumb
+            updateBreadcrumb();
             
             // Clear previous related movies and insights
             const relatedSection = document.getElementById('relatedMovies');
@@ -615,6 +661,9 @@
             relatedDiv.innerHTML = '<div class="loading"></div> Loading related movies...';
             sectionActions.innerHTML = '';
             relatedSection.style.display = 'block';
+            
+            // Scroll to related movies section
+            relatedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
             try {
                 const response = await fetch(`${API_BASE_URL}/movies/${traktId}/related`);
@@ -629,14 +678,19 @@
                 relatedDiv.innerHTML = relatedMovies.map(movie => {
                     const posterUrl = movie.posterUrl || 'https://via.placeholder.com/300x450?text=No+Poster';
                     const rating = movie.rating ? movie.rating.toFixed(1) : 'N/A';
+                    const movieId = movie.ids.trakt;
                     
                     return `
-                        <div class="movie-card">
+                        <div class="movie-card" onclick="selectMovie(${movieId}, '${escapeHtml(movie.title)}', '${escapeHtml(movie.overview || '')}')">
                             <img src="${posterUrl}" alt="${escapeHtml(movie.title)}" class="movie-poster" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
                             <div class="movie-title">${escapeHtml(movie.title)}</div>
                             <div class="movie-year">${movie.year || 'Unknown Year'}</div>
                             <div class="movie-rating">⭐ ${rating}</div>
                             <div class="movie-overview">${escapeHtml(movie.overview || 'No overview available.')}</div>
+                            <div class="movie-actions">
+                                ${aiAvailable ? `<button id="synopsis-btn-${movieId}" class="ai-btn" onclick="event.stopPropagation(); generateSynopsis('${escapeHtml(movie.title)}', '${escapeHtml(movie.overview || '')}', ${movieId})">✨ AI Synopsis</button>` : ''}
+                                <button class="ai-btn" onclick="event.stopPropagation(); exploreRelated(${movieId}, '${escapeHtml(movie.title)}', '${escapeHtml(movie.overview || '')}')">🔍 Explore Related</button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -653,6 +707,97 @@
             } catch (error) {
                 relatedDiv.innerHTML = `<div class="error">Error loading related movies: ${error.message}</div>`;
             }
+        }
+
+        // New function to explore related movies from a related movie
+        async function exploreRelated(traktId, title, overview) {
+            // Show loading feedback
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="loading"></span> Loading...';
+            button.disabled = true;
+            
+            try {
+                // Use selectMovie to load new related movies
+                await selectMovie(traktId, title, overview);
+                
+                // Show success feedback
+                button.innerHTML = '✅ Loaded';
+                button.className = 'ai-btn success';
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.className = 'ai-btn';
+                    button.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                // Show error and reset button
+                showMessage('relatedResults', `Error exploring related movies: ${error.message}`, 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Update breadcrumb navigation
+        function updateBreadcrumb() {
+            const breadcrumbDiv = document.getElementById('breadcrumb');
+            
+            if (movieHistory.length === 0) {
+                breadcrumbDiv.style.display = 'none';
+                return;
+            }
+            
+            breadcrumbDiv.style.display = 'block';
+            
+            let breadcrumbHTML = '<span class="breadcrumb-item">🏠 Exploration Path: </span>';
+            
+            movieHistory.forEach((movie, index) => {
+                if (index === movieHistory.length - 1) {
+                    // Current movie
+                    breadcrumbHTML += `<span class="breadcrumb-item current">${escapeHtml(movie.title)}</span>`;
+                } else {
+                    // Previous movies - clickable
+                    breadcrumbHTML += `<span class="breadcrumb-item">
+                        <a class="breadcrumb-link" onclick="navigateToMovie(${index})">${escapeHtml(movie.title)}</a>
+                        <span> → </span>
+                    </span>`;
+                }
+            });
+            
+            // Add reset button
+            if (movieHistory.length > 1) {
+                breadcrumbHTML += `<span class="breadcrumb-item" style="margin-left: 15px;">
+                    <a class="breadcrumb-link" onclick="resetExploration()">🔄 Reset</a>
+                </span>`;
+            }
+            
+            breadcrumbDiv.innerHTML = breadcrumbHTML;
+        }
+
+        // Navigate to a previous movie in the history
+        async function navigateToMovie(historyIndex) {
+            if (historyIndex >= 0 && historyIndex < movieHistory.length) {
+                // Truncate history to the selected point
+                movieHistory = movieHistory.slice(0, historyIndex + 1);
+                
+                const movie = movieHistory[historyIndex];
+                
+                // Load the movie without adding to history
+                await selectMovie(movie.traktId, movie.title, movie.overview, false);
+            }
+        }
+
+        // Reset exploration to start fresh
+        function resetExploration() {
+            movieHistory = [];
+            const relatedSection = document.getElementById('relatedMovies');
+            relatedSection.style.display = 'none';
+            
+            // Scroll back to search results
+            const searchSection = document.querySelector('.search-section');
+            searchSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // Enter key support for search
