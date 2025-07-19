@@ -39,7 +39,7 @@ function checkPackages() {
 function checkEnvFile() {
   console.log('🔧 Checking environment configuration...');
   
-  const envFile = path.join(__dirname, '.env');
+  const envFile = path.join(__dirname, '..', '.env');
   if (!fs.existsSync(envFile)) {
     console.log('❌ .env file not found');
     console.log('Please copy .env.example to .env and add your API keys:');

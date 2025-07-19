@@ -6,6 +6,69 @@ const compression = require('compression');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
+// Simple in-memory cache implementation
+class MemoryCache {
+  constructor(defaultTTL = 300000) { // 5 minutes default
+    this.cache = new Map();
+    this.defaultTTL = defaultTTL;
+  }
+
+  set(key, value, ttl = this.defaultTTL) {
+    const expiry = Date.now() + ttl;
+    this.cache.set(key, { value, expiry });
+  }
+
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() > item.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.value;
+  }
+
+  has(key) {
+    return this.get(key) !== null;
+  }
+
+  delete(key) {
+    return this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  size() {
+    return this.cache.size;
+  }
+
+  // Clean expired entries
+  cleanup() {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expiry) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+// Initialize cache instances
+const apiCache = new MemoryCache(300000); // 5 minutes for API responses
+const enhancedCache = new MemoryCache(600000); // 10 minutes for enhanced data
+const aiCache = new MemoryCache(1800000); // 30 minutes for AI responses
+
+// Cache cleanup interval (every 5 minutes)
+setInterval(() => {
+  apiCache.cleanup();
+  enhancedCache.cleanup();
+  aiCache.cleanup();
+}, 300000);
+
 // Configure logging
 const log = {
   info: (msg) => console.log(`[INFO] ${new Date().toISOString()} - ${msg}`),
@@ -78,9 +141,24 @@ if (GEMINI_API_KEY) {
 
 // Helper functions
 async function makeTraktRequest(endpoint, params = {}) {
+  const cacheKey = `trakt:${endpoint}:${JSON.stringify(params)}`;
+  
+  // Check cache first
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for Trakt: ${endpoint}`);
+    return cached;
+  }
+  
   try {
     const response = await traktClient.get(endpoint, { params });
-    return response.data;
+    const data = response.data;
+    
+    // Cache the response
+    apiCache.set(cacheKey, data);
+    log.info(`Cached Trakt response: ${endpoint}`);
+    
+    return data;
   } catch (error) {
     log.error(`Trakt API request failed: ${error.message}`);
     return null;
@@ -90,9 +168,24 @@ async function makeTraktRequest(endpoint, params = {}) {
 async function makeTmdbRequest(endpoint, params = {}) {
   if (!TMDB_API_KEY) return null;
   
+  const cacheKey = `tmdb:${endpoint}:${JSON.stringify(params)}`;
+  
+  // Check cache first
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for TMDB: ${endpoint}`);
+    return cached;
+  }
+  
   try {
     const response = await tmdbClient.get(endpoint, { params });
-    return response.data;
+    const data = response.data;
+    
+    // Cache the response
+    apiCache.set(cacheKey, data);
+    log.info(`Cached TMDB response: ${endpoint}`);
+    
+    return data;
   } catch (error) {
     log.error(`TMDB API request failed: ${error.message}`);
     return null;
@@ -101,6 +194,15 @@ async function makeTmdbRequest(endpoint, params = {}) {
 
 async function enhanceMovieData(movieItem) {
   const movie = movieItem.movie;
+  const cacheKey = `enhanced:movie:${movie.ids.trakt}`;
+  
+  // Check enhanced cache first
+  const cached = enhancedCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for enhanced movie: ${movie.title}`);
+    return cached;
+  }
+  
   const enhancedItem = { ...movieItem };
   
   try {
@@ -132,6 +234,10 @@ async function enhanceMovieData(movieItem) {
       }
     }
     
+    // Cache the enhanced result
+    enhancedCache.set(cacheKey, enhancedItem);
+    log.info(`Cached enhanced movie: ${movie.title}`);
+    
   } catch (error) {
     log.warn(`Error enhancing movie ${movie.title}: ${error.message}`);
   }
@@ -140,6 +246,15 @@ async function enhanceMovieData(movieItem) {
 }
 
 async function enhanceRelatedMovie(movie) {
+  const cacheKey = `enhanced:related:${movie.ids.trakt}`;
+  
+  // Check enhanced cache first
+  const cached = enhancedCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for enhanced related movie: ${movie.title}`);
+    return cached;
+  }
+  
   const enhancedMovie = { ...movie };
   
   try {
@@ -167,6 +282,10 @@ async function enhanceRelatedMovie(movie) {
       }
     }
     
+    // Cache the enhanced result
+    enhancedCache.set(cacheKey, enhancedMovie);
+    log.info(`Cached enhanced related movie: ${movie.title}`);
+    
   } catch (error) {
     log.warn(`Error enhancing related movie ${movie.title}: ${error.message}`);
     enhancedMovie.rating = 0;
@@ -175,10 +294,21 @@ async function enhanceRelatedMovie(movie) {
   return enhancedMovie;
 }
 
+// Cache middleware for HTTP responses
+function setCacheHeaders(req, res, next) {
+  // Set cache headers for API responses
+  res.set({
+    'Cache-Control': 'public, max-age=300', // 5 minutes
+    'ETag': `"${Date.now()}"`,
+    'Vary': 'Accept-Encoding'
+  });
+  next();
+}
+
 // API Routes
 
 // Search movies with enhancement
-app.get('/api/search/movies', async (req, res) => {
+app.get('/api/search/movies', setCacheHeaders, async (req, res) => {
   const startTime = Date.now();
   const query = req.query.query?.trim();
   
@@ -218,7 +348,7 @@ app.get('/api/search/movies', async (req, res) => {
 });
 
 // Fast search without enhancement
-app.get('/api/search/movies/fast', async (req, res) => {
+app.get('/api/search/movies/fast', setCacheHeaders, async (req, res) => {
   const query = req.query.query?.trim();
   
   if (!query) {
@@ -243,7 +373,7 @@ app.get('/api/search/movies/fast', async (req, res) => {
 });
 
 // Enhance a specific movie
-app.get('/api/movies/:traktId/enhance', async (req, res) => {
+app.get('/api/movies/:traktId/enhance', setCacheHeaders, async (req, res) => {
   const traktId = req.params.traktId;
   
   try {
@@ -266,7 +396,7 @@ app.get('/api/movies/:traktId/enhance', async (req, res) => {
 });
 
 // Get movie details
-app.get('/api/movies/:traktId', async (req, res) => {
+app.get('/api/movies/:traktId', setCacheHeaders, async (req, res) => {
   const traktId = req.params.traktId;
   
   try {
@@ -282,7 +412,7 @@ app.get('/api/movies/:traktId', async (req, res) => {
 });
 
 // Get related movies with enhancement
-app.get('/api/movies/:traktId/related', async (req, res) => {
+app.get('/api/movies/:traktId/related', setCacheHeaders, async (req, res) => {
   const startTime = Date.now();
   const traktId = req.params.traktId;
   
@@ -317,7 +447,7 @@ app.get('/api/movies/:traktId/related', async (req, res) => {
 });
 
 // Get related movies fast (no enhancement)
-app.get('/api/movies/:traktId/related/fast', async (req, res) => {
+app.get('/api/movies/:traktId/related/fast', setCacheHeaders, async (req, res) => {
   const traktId = req.params.traktId;
   
   try {
@@ -350,6 +480,14 @@ app.post('/api/ai/synopsis', async (req, res) => {
     return res.status(400).json({ error: 'Movie title is required' });
   }
 
+  // Check AI cache first
+  const cacheKey = `ai:synopsis:${movieTitle}:${movieOverview || 'no-overview'}`;
+  const cached = aiCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for AI synopsis: ${movieTitle}`);
+    return res.json({ synopsis: cached });
+  }
+
   try {
     const prompt = `Generate a compelling and slightly expanded synopsis for the movie '${movieTitle}' which is about '${movieOverview || 'No overview available'}'. Keep it concise but engaging, around 2-3 sentences.`;
     
@@ -358,7 +496,10 @@ app.post('/api/ai/synopsis', async (req, res) => {
     const response = await result.response;
     const text = response.text();
     
-    log.info(`Generated synopsis for movie: ${movieTitle}`);
+    // Cache the AI response
+    aiCache.set(cacheKey, text);
+    log.info(`Generated and cached synopsis for movie: ${movieTitle}`);
+    
     res.json({ synopsis: text });
     
   } catch (error) {
@@ -385,11 +526,19 @@ app.post('/api/ai/insights', async (req, res) => {
     return res.status(400).json({ error: 'Selected movie and related movies are required' });
   }
 
+  const selectedTitle = selectedMovie.title;
+  const selectedOverview = selectedMovie.overview || 'a movie with interesting themes';
+  const relatedTitles = relatedMovies.map(movie => movie.title).join(', ');
+  
+  // Check AI cache first
+  const cacheKey = `ai:insights:${selectedTitle}:${relatedTitles}`;
+  const cached = aiCache.get(cacheKey);
+  if (cached) {
+    log.info(`Cache hit for AI insights: ${selectedTitle}`);
+    return res.json({ insights: cached });
+  }
+
   try {
-    const selectedTitle = selectedMovie.title;
-    const selectedOverview = selectedMovie.overview || 'a movie with interesting themes';
-    const relatedTitles = relatedMovies.map(movie => movie.title).join(', ');
-    
     const prompt = `The movie '${selectedTitle}' is known for its themes and plot like: '${selectedOverview}'. Here are some related movies: ${relatedTitles}. Explain why someone who liked '${selectedTitle}' might enjoy these related movies, highlighting common themes, genres, or directorial styles. Be insightful and encouraging, around 3-4 sentences.`;
     
     log.info(`Generating insights for: ${selectedTitle}`);
@@ -397,7 +546,10 @@ app.post('/api/ai/insights', async (req, res) => {
     const response = await result.response;
     const text = response.text();
     
-    log.info(`Successfully generated insights for movie: ${selectedTitle}`);
+    // Cache the AI response
+    aiCache.set(cacheKey, text);
+    log.info(`Generated and cached insights for movie: ${selectedTitle}`);
+    
     res.json({ insights: text });
     
   } catch (error) {
@@ -412,6 +564,52 @@ app.post('/api/ai/insights', async (req, res) => {
   }
 });
 
+// Cache status endpoint
+app.get('/api/cache/status', (req, res) => {
+  res.json({
+    api_cache: {
+      size: apiCache.size(),
+      ttl: '5 minutes'
+    },
+    enhanced_cache: {
+      size: enhancedCache.size(),
+      ttl: '10 minutes'
+    },
+    ai_cache: {
+      size: aiCache.size(),
+      ttl: '30 minutes'
+    },
+    total_cached_items: apiCache.size() + enhancedCache.size() + aiCache.size()
+  });
+});
+
+// Clear cache endpoint (for development/testing)
+app.post('/api/cache/clear', (req, res) => {
+  const { type } = req.body;
+  
+  if (type === 'all' || !type) {
+    apiCache.clear();
+    enhancedCache.clear();
+    aiCache.clear();
+    log.info('All caches cleared');
+    res.json({ message: 'All caches cleared successfully' });
+  } else if (type === 'api') {
+    apiCache.clear();
+    log.info('API cache cleared');
+    res.json({ message: 'API cache cleared successfully' });
+  } else if (type === 'enhanced') {
+    enhancedCache.clear();
+    log.info('Enhanced cache cleared');
+    res.json({ message: 'Enhanced cache cleared successfully' });
+  } else if (type === 'ai') {
+    aiCache.clear();
+    log.info('AI cache cleared');
+    res.json({ message: 'AI cache cleared successfully' });
+  } else {
+    res.status(400).json({ error: 'Invalid cache type. Use: all, api, enhanced, or ai' });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -420,7 +618,14 @@ app.get('/api/health', (req, res) => {
     tmdb_api_configured: !!TMDB_API_KEY,
     gemini_api_configured: !!GEMINI_API_KEY,
     optimization: 'enabled',
-    runtime: 'Node.js'
+    runtime: 'Node.js',
+    caching: {
+      enabled: true,
+      api_cache_size: apiCache.size(),
+      enhanced_cache_size: enhancedCache.size(),
+      ai_cache_size: aiCache.size(),
+      total_cached_items: apiCache.size() + enhancedCache.size() + aiCache.size()
+    }
   });
 });
 
