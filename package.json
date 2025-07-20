@@ -10,7 +10,9 @@
     "test-migration": "node scripts/test_migration.js",
     "test-ai": "node scripts/test_ai_integration.js",
     "test-gemini": "node scripts/test_gemini_api.js",
-    "quick-start": "node scripts/start_node.js"
+    "quick-start": "node scripts/start_node.js",
+    "generate-network": "node scripts/movie_network_generator.js",
+    "generate-networks": "node scripts/generate_movie_networks.js"
   },
   "keywords": [
     "trakt",
