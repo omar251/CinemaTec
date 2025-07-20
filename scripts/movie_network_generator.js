@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 class MovieNetworkGenerator {
-    constructor(baseUrl = 'http://127.0.0.1:5000/api') {
+    constructor(baseUrl = '/api') {
         this.baseUrl = baseUrl;
         this.movieNetwork = new Map();
         this.visitedMovies = new Set();

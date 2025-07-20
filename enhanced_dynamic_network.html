@@ -1235,7 +1235,7 @@
         <script>
             class EnhancedMovieNetwork {
                 constructor() {
-                    this.apiBase = "http://127.0.0.1:5000/api";
+                    this.apiBase = '/api';
                     this.nodes = [];
                     this.links = [];
                     this.nodeMap = new Map();
@@ -1838,7 +1838,7 @@
                         };
 
                         const response = await fetch(
-                            `${this.apiBase.replace("/api", "")}/api/networks/save`,
+                            `/api/networks/save`,
                             {
                                 method: "POST",
                                 headers: {
@@ -1862,7 +1862,7 @@
                 async loadNetworkFromServer(networkId) {
                     try {
                         const response = await fetch(
-                            `${this.apiBase.replace("/api", "")}/api/networks/${networkId}`,
+                            `/api/networks/${networkId}`,
                         );
                         if (!response.ok)
                             throw new Error("Failed to load network");
@@ -1878,7 +1878,7 @@
                 async getSavedNetworks() {
                     try {
                         const response = await fetch(
-                            `${this.apiBase.replace("/api", "")}/api/networks`,
+                            `/api/networks`,
                         );
                         if (!response.ok)
                             throw new Error("Failed to get saved networks");
@@ -1894,7 +1894,7 @@
                 async deleteNetworkFromServer(networkId) {
                     try {
                         const response = await fetch(
-                            `${this.apiBase.replace("/api", "")}/api/networks/${networkId}`,
+                            `/api/networks/${networkId}`,
                             {
                                 method: "DELETE",
                             },

@@ -728,7 +728,7 @@
     <script>
         class DynamicMovieNetwork {
             constructor() {
-                this.apiBase = 'http://127.0.0.1:5000/api';
+                this.apiBase = '/api';
                 this.nodes = [];
                 this.links = [];
                 this.nodeMap = new Map();
@@ -1217,7 +1217,7 @@
                         seedMovie: this.nodes.find(n => n.depth === 0)?.title || null
                     };
 
-                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/save`, {
+                    const response = await fetch(`/api/networks/save`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -1238,7 +1238,7 @@
 
             async loadNetworkFromServer(networkId) {
                 try {
-                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/${networkId}`);
+                    const response = await fetch(`/api/networks/${networkId}`);
                     if (!response.ok) throw new Error('Failed to load network');
                     
                     const networkData = await response.json();
@@ -1252,7 +1252,7 @@
 
             async getSavedNetworks() {
                 try {
-                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks`);
+                    const response = await fetch(`/api/networks`);
                     if (!response.ok) throw new Error('Failed to get saved networks');
                     
                     const networks = await response.json();
@@ -1266,7 +1266,7 @@
 
             async deleteNetworkFromServer(networkId) {
                 try {
-                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/${networkId}`, {
+                    const response = await fetch(`/api/networks/${networkId}`, {
                         method: 'DELETE'
                     });
                     
@@ -1372,18 +1372,44 @@
         let network;
 
         function searchAndAddMovie() {
-            network.searchAndAddMovie();
+            console.log('searchAndAddMovie called');
+            if (!network) {
+                console.error('Network not initialized');
+                alert('❌ Network not initialized. Please refresh the page.');
+                return;
+            }
+            try {
+                network.searchAndAddMovie();
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('❌ Search failed: ' + error.message);
+            }
         }
 
         function clearNetwork() {
+            console.log('clearNetwork called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
             network.clearNetwork();
         }
 
         function centerNetwork() {
+            console.log('centerNetwork called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
             network.centerNetwork();
         }
 
         function toggleLabels() {
+            console.log('toggleLabels called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
             network.toggleLabels();
         }
 
@@ -1577,7 +1603,7 @@
 
         async function exportNetwork(networkId, format) {
             try {
-                const response = await fetch(`${network.apiBase.replace('/api', '')}/api/networks/${networkId}/export/${format}`);
+                const response = await fetch(`/api/networks/${networkId}/export/${format}`);
                 
                 if (response.ok) {
                     const blob = await response.blob();
@@ -1615,7 +1641,22 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            network = new DynamicMovieNetwork();
+            console.log('Initializing Dynamic Movie Network...');
+            
+            // Check if D3 is loaded
+            if (typeof d3 === 'undefined') {
+                console.error('D3.js failed to load from CDN');
+                document.body.innerHTML += '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 20px; border-radius: 10px; z-index: 9999;">❌ D3.js failed to load. Check internet connection.</div>';
+                return;
+            }
+            
+            try {
+                network = new DynamicMovieNetwork();
+                console.log('✅ Network initialized successfully');
+            } catch (error) {
+                console.error('❌ Network initialization failed:', error);
+                document.body.innerHTML += '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 20px; border-radius: 10px; z-index: 9999;">❌ Network initialization failed: ' + error.message + '</div>';
+            }
         });
     </script>
 </body>

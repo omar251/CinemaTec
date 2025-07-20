@@ -70,7 +70,7 @@ class MovieNetworkGenerator {
     constructor() {
         this.maxDepth = 3;              // Maximum exploration depth
         this.maxMoviesPerLevel = 5;     // Movies to explore per level
-        this.baseUrl = 'http://127.0.0.1:5000/api';  // API endpoint
+        this.baseUrl = '/api';  // API endpoint
     }
 }
 ```

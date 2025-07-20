@@ -8,7 +8,7 @@ async function testAIIntegration() {
   console.log('🤖 Testing Secure AI Integration');
   console.log('='.repeat(40));
   
-  const baseUrl = 'http://127.0.0.1:5000/api';
+  const baseUrl = '/api';
   
   try {
     // Test health endpoint first
