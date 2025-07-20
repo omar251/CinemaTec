@@ -117,11 +117,6 @@ app.use(express.json());
 // Serve static files from the project root directory
 app.use(express.static(__dirname));
 
-// Root route - serve the main page
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
 // API Configuration
 const TRAKT_API_KEY = process.env.TRAKT_API_KEY;
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
@@ -887,11 +882,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
   log.info(`🚀 Movie Network Explorer server running on port ${PORT}`);
-  log.info(`🌐 Web Interface: http://localhost:${PORT}`);
-  log.info(`🎭 Dynamic Network: http://localhost:${PORT}/dynamic_network.html`);
-  log.info(
-    `🔍 Enhanced Network: http://localhost:${PORT}/enhanced_dynamic_network.html`,
-  );
+  log.info(`🌐 Movie Network Explorer: http://localhost:${PORT}`);
   log.info(`🏥 Health check: http://localhost:${PORT}/api/health`);
   log.info(`🎬 Trakt API: ${TRAKT_API_KEY ? "Configured" : "Missing"}`);
   log.info(`🖼️  TMDB API: ${TMDB_API_KEY ? "Configured" : "Missing"}`);

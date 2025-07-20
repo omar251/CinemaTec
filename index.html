@@ -1,825 +1,1663 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Enhanced Trakt API Explorer</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-            rel="stylesheet"
-        />
-        <style>
-            :root {
-                --primary-bg: #0f172a;
-                --secondary-bg: #1e293b;
-                --card-bg: #334155;
-                --accent: #3b82f6;
-                --accent-hover: #2563eb;
-                --text-primary: #f1f5f9;
-                --text-secondary: #cbd5e1;
-                --text-muted: #94a3b8;
-                --success: #10b981;
-                --warning: #f59e0b;
-                --error: #ef4444;
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Movie Network Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1a1a2e;
+            --secondary-color: #16213e;
+            --accent-color: #e94560;
+            --gemini-accent: #f6e05e;
+            --text-color: #ffffff;
+            --text-secondary: #b0b0b0;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        .search-btn, .control-btn {
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+            font-size: 12px;
+        }
+
+        .search-btn:hover, .control-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .network-container {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #network-svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #network-svg:active {
+            cursor: grabbing;
+        }
+
+        .node {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover {
+            stroke-width: 3px;
+            filter: brightness(1.2);
+        }
+
+        .node.expanding {
+            stroke: var(--gemini-accent);
+            stroke-width: 4px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .link.new {
+            stroke: var(--gemini-accent);
+            stroke-width: 2px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; stroke-width: 4px; }
+            to { opacity: 1; stroke-width: 2px; }
+        }
+
+        .node-label {
+            font-size: 11px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-weight: 500;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            pointer-events: none;
+            font-size: 13px;
+            border: 1px solid var(--glass-border);
+            max-width: 250px;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            z-index: 999;
+        }
+
+        .sidebar h3 {
+            color: var(--gemini-accent);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .movie-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .movie-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .movie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .movie-title {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 13px;
+            flex: 1;
+            margin-right: 8px;
+        }
+
+        .movie-rating {
+            color: var(--gemini-accent);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .movie-meta {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .movie-year {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .movie-runtime, .movie-watchers {
+            color: var(--text-secondary);
+        }
+
+        .movie-genres {
+            color: #10b981;
+            font-size: 10px;
+            margin-bottom: 4px;
+            font-style: italic;
+        }
+
+        .movie-depth {
+            color: var(--text-secondary);
+            font-size: 9px;
+            margin-bottom: 6px;
+        }
+
+        .load-details {
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            text-align: center;
+            margin-top: 6px;
+            transition: transform 0.2s;
+        }
+
+        .load-details:hover {
+            transform: scale(1.05);
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            z-index: 1002;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            background: var(--success-color);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1003;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: var(--accent-color);
+        }
+
+        .help-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+
+        .help-panel h4 {
+            color: var(--gemini-accent);
+            margin-bottom: 8px;
+        }
+
+        .help-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .help-panel li {
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--gemini-accent);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .network-preview {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .network-preview h4 {
+            margin: 0 0 10px 0;
+            color: var(--gemini-accent);
+            font-size: 14px;
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(45deg, var(--success-color), var(--gemini-accent));
+        }
+
+        .saved-networks {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .saved-network-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .saved-network-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .saved-network-item.selected {
+            border-color: var(--gemini-accent);
+            background: rgba(246, 224, 94, 0.1);
+        }
+
+        .network-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .network-item-title {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .network-item-date {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .network-item-description {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .network-item-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .network-item-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .action-btn.danger {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .action-btn.danger:hover {
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                padding: 10px;
             }
 
-            * {
-                box-sizing: border-box;
+            .sidebar {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                top: auto;
+                width: auto;
+                max-height: 200px;
+                border-radius: 15px 15px 0 0;
             }
 
-            body {
-                font-family: "Inter", sans-serif;
-                background: linear-gradient(
-                    135deg,
-                    var(--primary-bg) 0%,
-                    #1e293b 100%
-                );
-                color: var(--text-primary);
-                min-height: 100vh;
-                margin: 0;
-                padding: 0;
+            .help-panel {
+                display: none;
             }
 
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 2rem;
+            .network-container {
+                bottom: 220px;
             }
 
-            .glass-card {
-                background: rgba(51, 65, 85, 0.8);
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 1rem;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            .modal-content {
+                width: 95%;
+                margin: 10px;
             }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 Dynamic Movie Network</h1>
+        <div class="search-container">
+            <input type="text" class="search-input" id="movieSearch" placeholder="Search for a movie to add to network..." />
+            <button class="search-btn" onclick="searchAndAddMovie()">🔍 Add</button>
+        </div>
+        <div class="controls">
+            <div class="stats" id="networkStats">0 movies, 0 connections</div>
+            <button class="control-btn" onclick="showSaveDialog()">💾 Save</button>
+            <button class="control-btn" onclick="showLoadDialog()">📂 Load</button>
+            <button class="control-btn" onclick="clearNetwork()">🗑️ Clear</button>
+            <button class="control-btn" onclick="centerNetwork()">🎯 Center</button>
+            <button class="control-btn" onclick="toggleLabels()">🏷️ Labels</button>
+        </div>
+    </div>
 
-            .input-group {
-                position: relative;
-            }
+    <div class="network-container">
+        <svg id="network-svg"></svg>
+    </div>
 
-            .input-field {
-                background: rgba(30, 41, 59, 0.8);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: var(--text-primary);
-                border-radius: 0.75rem;
-                padding: 1rem 1.25rem;
-                width: 100%;
-                font-size: 1rem;
-                transition: all 0.3s ease;
-            }
-
-            .input-field:focus {
-                outline: none;
-                border-color: var(--accent);
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            }
-
-            .btn {
-                background: linear-gradient(
-                    135deg,
-                    var(--accent) 0%,
-                    var(--accent-hover) 100%
-                );
-                color: white;
-                padding: 1rem 2rem;
-                border-radius: 0.75rem;
-                border: none;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
-            }
-
-            .btn:active {
-                transform: translateY(0);
-            }
-
-            .btn:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-                transform: none;
-            }
-
-            .movie-card {
-                background: var(--card-bg);
-                border-radius: 1rem;
-                padding: 1.5rem;
-                transition: all 0.3s ease;
-                cursor: pointer;
-                position: relative;
-                overflow: hidden;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .movie-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-                border-color: var(--accent);
-            }
-
-            .movie-card.selected {
-                background: linear-gradient(
-                    135deg,
-                    var(--accent) 0%,
-                    var(--accent-hover) 100%
-                );
-                border-color: var(--accent);
-            }
-
-            .movie-poster {
-                width: 100%;
-                height: 300px;
-                object-fit: cover;
-                border-radius: 0.75rem;
-                background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 3rem;
-                color: var(--text-muted);
-            }
-
-            .poster-placeholder {
-                background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--text-muted);
-                font-size: 2rem;
-            }
-
-            .rating-badge {
-                position: absolute;
-                top: 1rem;
-                right: 1rem;
-                background: linear-gradient(
-                    135deg,
-                    var(--warning) 0%,
-                    #f97316 100%
-                );
-                color: white;
-                padding: 0.5rem 1rem;
-                border-radius: 2rem;
-                font-weight: 600;
-                font-size: 0.875rem;
-            }
-
-            .genre-tag {
-                background: rgba(59, 130, 246, 0.2);
-                color: var(--accent);
-                padding: 0.25rem 0.75rem;
-                border-radius: 1rem;
-                font-size: 0.75rem;
-                font-weight: 500;
-                margin-right: 0.5rem;
-                margin-bottom: 0.5rem;
-                display: inline-block;
-            }
-
-            .loading-spinner {
-                border: 3px solid rgba(255, 255, 255, 0.2);
-                border-top: 3px solid var(--accent);
-                border-radius: 50%;
-                width: 30px;
-                height: 30px;
-                animation: spin 1s linear infinite;
-            }
-
-            @keyframes spin {
-                0% {
-                    transform: rotate(0deg);
-                }
-                100% {
-                    transform: rotate(360deg);
-                }
-            }
-
-            .error-message {
-                color: var(--error);
-                background: rgba(239, 68, 68, 0.1);
-                border: 1px solid rgba(239, 68, 68, 0.3);
-                padding: 1rem;
-                border-radius: 0.75rem;
-                margin-top: 1rem;
-            }
-
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 1rem;
-                margin-top: 1rem;
-            }
-
-            .stat-card {
-                background: rgba(30, 41, 59, 0.5);
-                padding: 1rem;
-                border-radius: 0.75rem;
-                text-align: center;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .stat-value {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: var(--accent);
-            }
-
-            .stat-label {
-                font-size: 0.875rem;
-                color: var(--text-muted);
-                margin-top: 0.25rem;
-            }
-
-            .filter-tabs {
-                display: flex;
-                gap: 1rem;
-                margin-bottom: 2rem;
-                flex-wrap: wrap;
-            }
-
-            .filter-tab {
-                padding: 0.75rem 1.5rem;
-                background: rgba(30, 41, 59, 0.5);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 2rem;
-                color: var(--text-secondary);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                font-weight: 500;
-            }
-
-            .filter-tab.active {
-                background: var(--accent);
-                color: white;
-                border-color: var(--accent);
-            }
-
-            .filter-tab:hover {
-                background: var(--accent);
-                color: white;
-            }
-
-            .movie-details {
-                display: grid;
-                grid-template-columns: auto 1fr;
-                gap: 2rem;
-                align-items: start;
-            }
-
-            .movie-info {
-                flex: 1;
-            }
-
-            .pulse {
-                animation: pulse 2s infinite;
-            }
-
-            @keyframes pulse {
-                0%,
-                100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.5;
-                }
-            }
-
-            .fade-in {
-                animation: fadeIn 0.5s ease-in-out;
-            }
-
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            @media (max-width: 768px) {
-                .movie-details {
-                    grid-template-columns: 1fr;
-                    gap: 1rem;
-                }
-
-                .filter-tabs {
-                    flex-direction: column;
-                }
-
-                .stats-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="glass-card p-8 mb-8">
-                <h1
-                    class="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"
-                >
-                    Enhanced Trakt Explorer
-                </h1>
-                <p class="text-center text-gray-400 mb-8">
-                    Discover movies and find your next favorite film
-                </p>
-
-                <div class="input-group mb-6">
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <input
-                            type="text"
-                            id="movieTitle"
-                            placeholder="Search for movies..."
-                            class="input-field flex-grow"
-                        />
-                        <button id="searchMovieBtn" class="btn shrink-0">
-                            <span id="searchBtnText">Search</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div
-                    id="loadingSearch"
-                    class="hidden flex justify-center items-center py-8"
-                >
-                    <div class="loading-spinner"></div>
-                    <span class="ml-3 text-lg">Searching movies...</span>
-                </div>
-                <div id="searchError" class="error-message hidden"></div>
-            </div>
-
-            <div id="searchResults" class="hidden">
-                <div class="glass-card p-6 mb-8">
-                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
-                        Search Results
-                    </h2>
-                    <div class="filter-tabs">
-                        <div class="filter-tab active" data-sort="relevance">
-                            Relevance
-                        </div>
-                        <div class="filter-tab" data-sort="year">Year</div>
-                        <div class="filter-tab" data-sort="rating">Rating</div>
-                        <div class="filter-tab" data-sort="title">Title</div>
-                    </div>
-                    <div
-                        id="movieList"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    >
-                        <!-- Search results will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <div id="selectedMovieDetails" class="hidden">
-                <div class="glass-card p-6 mb-8">
-                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
-                        Movie Details
-                    </h2>
-                    <div id="movieDetailsContent">
-                        <!-- Movie details will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <div id="relatedMoviesSection" class="hidden">
-                <div class="glass-card p-6">
-                    <h2 class="text-2xl font-semibold mb-4 text-blue-300">
-                        Related Movies
-                    </h2>
-                    <button id="getRelatedMoviesBtn" class="btn mb-6">
-                        Get Recommendations
-                    </button>
-
-                    <div
-                        id="loadingRelated"
-                        class="hidden flex justify-center items-center py-8"
-                    >
-                        <div class="loading-spinner"></div>
-                        <span class="ml-3 text-lg"
-                            >Finding related movies...</span
-                        >
-                    </div>
-                    <div id="relatedError" class="error-message hidden"></div>
-                    <div
-                        id="relatedMoviesList"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    >
-                        <!-- Related movies will be loaded here -->
-                    </div>
-                </div>
+    <div class="sidebar">
+        <h3>🎭 Network Movies</h3>
+        <div id="movieList">
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                Search for a movie to start building your network!
             </div>
         </div>
+    </div>
 
-        <script>
-            // API Configuration - Now using secure backend
-            const API_BASE_URL = "http://localhost:5000/api";
-            
-            // Remove direct API access - now handled by backend
-            // const TRAKT_API_KEY = ""; // Moved to backend environment variables
-            // const TRAKT_BASE_URL = "https://api.trakt.tv";
-            // const TMDB_API_KEY = ""; // Moved to backend environment variables
-            // const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-            // const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+    <div class="loading" id="loadingIndicator">
+        <div class="spinner"></div>
+        <div>Loading related movies...</div>
+    </div>
 
-            // DOM Elements
-            const movieTitleInput = document.getElementById("movieTitle");
-            const searchMovieBtn = document.getElementById("searchMovieBtn");
-            const searchBtnText = document.getElementById("searchBtnText");
-            const loadingSearch = document.getElementById("loadingSearch");
-            const searchError = document.getElementById("searchError");
-            const searchResults = document.getElementById("searchResults");
-            const movieList = document.getElementById("movieList");
-            const selectedMovieDetails = document.getElementById(
-                "selectedMovieDetails",
-            );
-            const movieDetailsContent = document.getElementById(
-                "movieDetailsContent",
-            );
-            const relatedMoviesSection = document.getElementById(
-                "relatedMoviesSection",
-            );
-            const getRelatedMoviesBtn = document.getElementById(
-                "getRelatedMoviesBtn",
-            );
-            const loadingRelated = document.getElementById("loadingRelated");
-            const relatedError = document.getElementById("relatedError");
-            const relatedMoviesList =
-                document.getElementById("relatedMoviesList");
+    <div class="notification" id="notification"></div>
 
-            let selectedMovieTraktId = null;
-            let searchResultsData = [];
-            let currentSortBy = "relevance";
+    <div class="help-panel">
+        <h4>💡 How to Use</h4>
+        <ul>
+            <li>🔍 Search and add movies</li>
+            <li>🖱️ Click nodes to expand</li>
+            <li>🖱️ Drag nodes to rearrange</li>
+            <li>🖱️ Scroll to zoom</li>
+            <li>🖱️ Hover for details</li>
+        </ul>
+    </div>
 
-            /**
-             * Fetches data from the backend API.
-             */
-            async function fetchBackendApi(endpoint, params = new URLSearchParams()) {
-                const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <!-- Save Dialog -->
+    <div class="modal" id="saveModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💾 Save Network</h3>
+                <button class="close-btn" onclick="closeSaveDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="networkName">Network Name:</label>
+                    <input type="text" id="networkName" placeholder="Enter network name..." />
+                </div>
+                <div class="form-group">
+                    <label for="networkDescription">Description (optional):</label>
+                    <textarea id="networkDescription" placeholder="Describe your network..."></textarea>
+                </div>
+                <div class="network-preview">
+                    <h4>Network Summary:</h4>
+                    <div id="savePreview">Loading...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" onclick="closeSaveDialog()">Cancel</button>
+                <button class="control-btn primary" onclick="saveNetwork()">💾 Save Network</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Dialog -->
+    <div class="modal" id="loadModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📂 Load Network</h3>
+                <button class="close-btn" onclick="closeLoadDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="saved-networks" id="savedNetworksList">
+                    Loading saved networks...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" onclick="closeLoadDialog()">Cancel</button>
+                <button class="control-btn" onclick="refreshNetworksList()">🔄 Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DynamicMovieNetwork {
+            constructor() {
+                this.apiBase = '/api';
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap = new Map();
+                this.showLabels = true;
+                this.nextNodeId = 0;
                 
-                const response = await fetch(url);
-
-                if (!response.ok) {
-                    const errorData = await response.text();
-                    throw new Error(
-                        `HTTP error! Status: ${response.status}, Message: ${errorData}`,
-                    );
-                }
-                return response.json();
+                this.setupVisualization();
+                this.setupEventListeners();
             }
 
-            /**
-             * Searches for movies based on the input title.
-             */
-            async function searchMovie() {
-                const title = movieTitleInput.value.trim();
-                if (!title) {
-                    displayError(searchError, "Please enter a movie title.");
-                    return;
+            setupVisualization() {
+                const svg = d3.select('#network-svg');
+                const width = window.innerWidth;
+                const height = window.innerHeight - 80;
+
+                this.svg = svg;
+                this.width = width;
+                this.height = height;
+
+                // Create main group for zooming/panning
+                this.g = svg.append('g');
+
+                // Setup zoom behavior
+                this.zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on('zoom', (event) => {
+                        this.g.attr('transform', event.transform);
+                    });
+
+                svg.call(this.zoom);
+
+                // Create simulation
+                this.simulation = d3.forceSimulation()
+                    .force('link', d3.forceLink().id(d => d.id).distance(120))
+                    .force('charge', d3.forceManyBody().strength(-400))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(35));
+
+                // Create containers for links and nodes
+                this.linkContainer = this.g.append('g').attr('class', 'links');
+                this.nodeContainer = this.g.append('g').attr('class', 'nodes');
+                this.labelContainer = this.g.append('g').attr('class', 'labels');
+
+                this.colorScale = d3.scaleOrdinal()
+                    .domain([0, 1, 2, 3])
+                    .range(['#e94560', '#f6e05e', '#10b981', '#3b82f6']);
+            }
+
+            setupEventListeners() {
+                // Search on Enter key
+                document.getElementById('movieSearch').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.searchAndAddMovie();
+                    }
+                });
+
+                // Window resize
+                window.addEventListener('resize', () => {
+                    this.handleResize();
+                });
+            }
+
+            handleResize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight - 80;
+                
+                this.width = width;
+                this.height = height;
+                
+                this.svg.attr('width', width).attr('height', height);
+                this.simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                this.simulation.alpha(0.3).restart();
+            }
+
+            async searchMovie(query) {
+                try {
+                    const response = await fetch(`${this.apiBase}/search/movies/fast?query=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error('Search failed');
+                    const data = await response.json();
+                    return data[0]?.movie || null;
+                } catch (error) {
+                    console.error('Search error:', error);
+                    return null;
+                }
+            }
+
+            async getRelatedMovies(movieId) {
+                try {
+                    const response = await fetch(`${this.apiBase}/movies/${movieId}/related/fast`);
+                    if (!response.ok) throw new Error('Failed to get related movies');
+                    const data = await response.json();
+                    return data.slice(0, 8); // Limit to 8 related movies
+                } catch (error) {
+                    console.error('Related movies error:', error);
+                    return [];
+                }
+            }
+
+            async getFullMovieDetails(movieId) {
+                try {
+                    const response = await fetch(`${this.apiBase}/movies/${movieId}/full`);
+                    if (!response.ok) throw new Error('Failed to get movie details');
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Movie details error:', error);
+                    return null;
+                }
+            }
+
+            addMovieToNetwork(movie, depth = 0, isNew = true, fullDetails = null) {
+                const movieKey = `${movie.title}_${movie.year}`;
+                
+                if (this.nodeMap.has(movieKey)) {
+                    const existingNode = this.nodeMap.get(movieKey);
+                    // Update with full details if provided
+                    if (fullDetails) {
+                        existingNode.fullDetails = fullDetails;
+                        this.updateSidebar();
+                    }
+                    return existingNode;
                 }
 
-                // Update button state
-                searchMovieBtn.disabled = true;
-                searchBtnText.textContent = "Searching...";
+                const node = {
+                    id: this.nextNodeId++,
+                    title: movie.title,
+                    year: movie.year,
+                    traktId: movie.ids.trakt,
+                    depth: depth,
+                    movieKey: movieKey,
+                    x: this.width / 2 + (Math.random() - 0.5) * 200,
+                    y: this.height / 2 + (Math.random() - 0.5) * 200,
+                    isNew: isNew,
+                    fullDetails: fullDetails || null,
+                    // Store basic details from movie object
+                    basicDetails: {
+                        overview: movie.overview,
+                        rating: movie.rating,
+                        votes: movie.votes,
+                        genres: movie.genres,
+                        runtime: movie.runtime,
+                        certification: movie.certification,
+                        trailer: movie.trailer
+                    }
+                };
 
-                // Clear previous results
-                clearResults();
-                loadingSearch.classList.remove("hidden");
+                this.nodes.push(node);
+                this.nodeMap.set(movieKey, node);
+                
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+
+                return node;
+            }
+
+            addConnection(sourceNode, targetNode, isNew = true) {
+                // Check if connection already exists
+                const existingLink = this.links.find(link => 
+                    (link.source.id === sourceNode.id && link.target.id === targetNode.id) ||
+                    (link.source.id === targetNode.id && link.target.id === sourceNode.id)
+                );
+
+                if (existingLink) return existingLink;
+
+                const link = {
+                    source: sourceNode,
+                    target: targetNode,
+                    isNew: isNew
+                };
+
+                this.links.push(link);
+                return link;
+            }
+
+            async expandNode(node) {
+                if (node.expanding) return; // Prevent multiple expansions
+                
+                node.expanding = true;
+                this.showLoading(true);
+                this.showNotification(`Expanding ${node.title}...`);
 
                 try {
-                    const params = new URLSearchParams({ query: title });
-                    const data = await fetchBackendApi("/search/movies", params);
-
-                    loadingSearch.classList.add("hidden");
-
-                    if (data && data.length > 0) {
-                        searchResultsData = data.filter((item) => item.movie);
-                        displaySearchResults();
-                        searchResults.classList.remove("hidden");
-                    } else {
-                        displayError(
-                            searchError,
-                            "No movies found for your search.",
-                        );
+                    const relatedMovies = await this.getRelatedMovies(node.traktId);
+                    
+                    for (const relatedMovie of relatedMovies) {
+                        const relatedNode = this.addMovieToNetwork(relatedMovie, node.depth + 1, true);
+                        this.addConnection(node, relatedNode, true);
                     }
+
+                    this.showNotification(`Added ${relatedMovies.length} related movies!`, 'success');
+                    
                 } catch (error) {
-                    loadingSearch.classList.add("hidden");
-                    displayError(
-                        searchError,
-                        `Error searching for movies: ${error.message}`,
-                    );
-                    console.error("Search error:", error);
+                    this.showNotification('Failed to expand network', 'error');
                 } finally {
-                    searchMovieBtn.disabled = false;
-                    searchBtnText.textContent = "Search";
+                    node.expanding = false;
+                    this.showLoading(false);
+                    this.updateVisualization();
                 }
             }
 
-            /**
-             * Displays search results with enhanced information.
-             */
-            function displaySearchResults() {
-                movieList.innerHTML = "";
+            updateVisualization() {
+                // Update simulation data
+                this.simulation.nodes(this.nodes);
+                this.simulation.force('link').links(this.links);
 
-                // Sort results
-                const sortedResults = [...searchResultsData].sort((a, b) => {
-                    switch (currentSortBy) {
-                        case "year":
-                            return (b.movie.year || 0) - (a.movie.year || 0);
-                        case "rating":
-                            return (
-                                (b.ratings?.rating || 0) -
-                                (a.ratings?.rating || 0)
-                            );
-                        case "title":
-                            return a.movie.title.localeCompare(b.movie.title);
-                        default:
-                            return 0; // Keep original order for relevance
-                    }
+                // Update links
+                const linkSelection = this.linkContainer
+                    .selectAll('line')
+                    .data(this.links, d => `${d.source.id}-${d.target.id}`);
+
+                linkSelection.exit().remove();
+
+                const linkEnter = linkSelection.enter()
+                    .append('line')
+                    .attr('class', d => `link ${d.isNew ? 'new' : ''}`);
+
+                linkEnter.merge(linkSelection)
+                    .attr('class', d => `link ${d.isNew ? 'new' : ''}`);
+
+                // Update nodes
+                const nodeSelection = this.nodeContainer
+                    .selectAll('circle')
+                    .data(this.nodes, d => d.id);
+
+                nodeSelection.exit().remove();
+
+                const nodeEnter = nodeSelection.enter()
+                    .append('circle')
+                    .attr('class', 'node')
+                    .attr('r', d => d.depth === 0 ? 15 : 10)
+                    .attr('fill', d => this.colorScale(Math.min(d.depth, 3)))
+                    .call(this.getDragBehavior())
+                    .on('click', (event, d) => this.expandNode(d))
+                    .on('mouseover', (event, d) => this.showTooltip(event, d))
+                    .on('mouseout', () => this.hideTooltip());
+
+                nodeEnter.merge(nodeSelection)
+                    .attr('class', d => `node ${d.expanding ? 'expanding' : ''}`)
+                    .attr('fill', d => this.colorScale(Math.min(d.depth, 3)));
+
+                // Update labels
+                const labelSelection = this.labelContainer
+                    .selectAll('text')
+                    .data(this.nodes, d => d.id);
+
+                labelSelection.exit().remove();
+
+                const labelEnter = labelSelection.enter()
+                    .append('text')
+                    .attr('class', 'node-label')
+                    .text(d => d.title)
+                    .style('display', this.showLabels ? 'block' : 'none');
+
+                labelEnter.merge(labelSelection)
+                    .text(d => d.title)
+                    .style('display', this.showLabels ? 'block' : 'none');
+
+                // Restart simulation
+                this.simulation.alpha(0.3).restart();
+
+                // Setup tick function
+                this.simulation.on('tick', () => {
+                    this.linkContainer.selectAll('line')
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+
+                    this.nodeContainer.selectAll('circle')
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y);
+
+                    this.labelContainer.selectAll('text')
+                        .attr('x', d => d.x)
+                        .attr('y', d => d.y + 25);
                 });
 
-                sortedResults.forEach((item) => {
-                    const movie = item.movie;
-                    const movieCard = document.createElement("div");
-                    movieCard.className = "movie-card fade-in";
-
-                    const rating = item.ratings?.rating || 0;
-                    const votes = item.stats?.votes || 0;
-                    const watchers = item.stats?.watchers || 0;
-                    const posterUrl = item.posterUrl;
-
-                    movieCard.innerHTML = `
-                    ${rating > 0 ? `<div class="rating-badge">★ ${rating.toFixed(1)}</div>` : ""}
-                    <div class="movie-poster ${!posterUrl ? "poster-placeholder" : ""}" style="height: 200px; margin-bottom: 1rem;">
-                        ${
-                            posterUrl
-                                ? `<img src="${posterUrl}" alt="${movie.title}" class="movie-poster">`
-                                : `<div style="font-size: 3rem;">🎬</div>`
-                        }
-                    </div>
-                    <div class="movie-info">
-                        <h3 class="text-xl font-semibold text-blue-200 mb-2">${movie.title}</h3>
-                        <p class="text-gray-400 mb-2">${movie.year || "Unknown"}</p>
-                        ${movie.overview ? `<p class="text-gray-300 text-sm mb-3 line-clamp-3">${movie.overview.substring(0, 120)}...</p>` : ""}
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-value">${votes}</div>
-                                <div class="stat-label">Votes</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value">${watchers}</div>
-                                <div class="stat-label">Watchers</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                    movieCard.dataset.traktId = movie.ids.trakt;
-                    movieCard.addEventListener("click", () =>
-                        selectMovie(movieCard, movie.ids.trakt, item),
-                    );
-                    movieList.appendChild(movieCard);
-                });
+                // Clear new flags after animation
+                setTimeout(() => {
+                    this.links.forEach(link => link.isNew = false);
+                    this.nodes.forEach(node => node.isNew = false);
+                }, 1000);
             }
 
-            /**
-             * Selects a movie and displays detailed information.
-             */
-            async function selectMovie(cardElement, traktId, movieData) {
-                // Update card selection
-                document.querySelectorAll(".movie-card").forEach((card) => {
-                    card.classList.remove("selected");
-                });
-                cardElement.classList.add("selected");
-
-                selectedMovieTraktId = traktId;
-
-                // Display detailed movie information
-                await displayMovieDetails(movieData);
-
-                // Show related movies section
-                relatedMoviesSection.classList.remove("hidden");
-                relatedMoviesList.innerHTML = "";
-                hideError(relatedError);
+            getDragBehavior() {
+                return d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) this.simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) this.simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    });
             }
 
-            /**
-             * Displays detailed movie information.
-             */
-            async function displayMovieDetails(movieData) {
-                const movie = movieData.movie;
-
-                try {
-                    // Get additional movie details
-                    const movieDetails = await fetchBackendApi(
-                        `/movies/${movie.ids.trakt}`,
-                    );
-
-                    movieDetailsContent.innerHTML = `
-                    <div class="movie-details">
-                        <div class="movie-poster" style="width: 200px; height: 300px;">
-                            ${
-                                movieData.posterUrl
-                                    ? `<img src="${movieData.posterUrl}" alt="${movie.title}" class="movie-poster">`
-                                    : `<div class="poster-placeholder">🎬</div>`
-                            }
-                        </div>
-                        <div class="movie-info">
-                            <h3 class="text-3xl font-bold text-blue-200 mb-2">${movie.title}</h3>
-                            <p class="text-xl text-gray-400 mb-4">${movie.year || "Unknown"}</p>
-
-                            ${movieDetails.tagline ? `<p class="text-lg text-blue-300 italic mb-4">"${movieDetails.tagline}"</p>` : ""}
-
-                            <div class="stats-grid mb-4">
-                                <div class="stat-card">
-                                    <div class="stat-value">${movieData.ratings?.rating ? movieData.ratings.rating.toFixed(1) : "N/A"}</div>
-                                    <div class="stat-label">Rating</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${movieDetails.runtime || "N/A"}</div>
-                                    <div class="stat-label">Runtime (min)</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${movieData.stats?.watchers || 0}</div>
-                                    <div class="stat-label">Watchers</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${movieData.stats?.votes || 0}</div>
-                                    <div class="stat-label">Votes</div>
-                                </div>
-                            </div>
-
-                            ${movieDetails.overview ? `<p class="text-gray-300 mb-4">${movieDetails.overview}</p>` : ""}
-
-                            ${
-                                movieDetails.genres &&
-                                movieDetails.genres.length > 0
-                                    ? `
-                                <div class="mb-4">
-                                    <h4 class="text-lg font-semibold mb-2">Genres:</h4>
-                                    <div>
-                                        ${movieDetails.genres.map((genre) => `<span class="genre-tag">${genre}</span>`).join("")}
-                                    </div>
-                                </div>
-                            `
-                                    : ""
-                            }
-
-                            <div class="text-sm text-gray-500">
-                                <p>Trakt ID: ${movie.ids.trakt}</p>
-                                ${movie.ids.imdb ? `<p>IMDB ID: ${movie.ids.imdb}</p>` : ""}
-                            </div>
-                        </div>
+            showTooltip(event, d) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.display = 'block';
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+                
+                const details = d.fullDetails || d.basicDetails || {};
+                const rating = details.rating ? `⭐ ${details.rating.toFixed(1)}` : '';
+                const votes = details.votes ? `(${details.votes.toLocaleString()} votes)` : '';
+                const runtime = details.runtime ? `⏱️ ${details.runtime}min` : '';
+                const certification = details.certification ? `🎬 ${details.certification}` : '';
+                const genres = details.genres ? `🎭 ${details.genres.slice(0, 3).join(', ')}` : '';
+                const watchers = details.stats?.watchers ? `👥 ${details.stats.watchers.toLocaleString()} watchers` : '';
+                
+                tooltip.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 8px; color: #f6e05e;">
+                        ${d.title} (${d.year})
+                    </div>
+                    ${rating ? `<div style="margin-bottom: 4px;">${rating} ${votes}</div>` : ''}
+                    ${runtime || certification ? `<div style="margin-bottom: 4px;">${runtime} ${certification}</div>` : ''}
+                    ${genres ? `<div style="margin-bottom: 4px;">${genres}</div>` : ''}
+                    ${watchers ? `<div style="margin-bottom: 4px;">${watchers}</div>` : ''}
+                    <div style="margin-top: 8px; font-size: 11px; color: #b0b0b0;">
+                        Depth: ${d.depth} • Click to expand
                     </div>
                 `;
-
-                    selectedMovieDetails.classList.remove("hidden");
-                } catch (error) {
-                    console.error("Error displaying movie details:", error);
-                }
             }
 
-            /**
-             * Fetches and displays related movies.
-             */
-            async function getRelatedMovies() {
-                if (!selectedMovieTraktId) {
-                    displayError(
-                        relatedError,
-                        "Please select a movie from the search results first.",
-                    );
+            hideTooltip() {
+                document.getElementById('tooltip').style.display = 'none';
+            }
+
+            updateSidebar() {
+                const movieList = document.getElementById('movieList');
+                
+                if (this.nodes.length === 0) {
+                    movieList.innerHTML = `
+                        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            Search for a movie to start building your network!
+                        </div>
+                    `;
                     return;
                 }
 
-                relatedMoviesList.innerHTML = "";
-                hideError(relatedError);
-                loadingRelated.classList.remove("hidden");
-
-                try {
-                    const data = await fetchBackendApi(
-                        `/movies/${selectedMovieTraktId}/related`,
-                    );
-                    loadingRelated.classList.add("hidden");
-
-                    if (data && data.length > 0) {
-                        data.forEach((movie) => {
-                            const movieCard = document.createElement("div");
-                            movieCard.className = "movie-card fade-in";
-                            movieCard.innerHTML = `
-                            ${movie.rating > 0 ? `<div class="rating-badge">★ ${movie.rating.toFixed(1)}</div>` : ""}
-                            <div class="movie-poster ${!movie.posterUrl ? "poster-placeholder" : ""}" style="height: 200px; margin-bottom: 1rem;">
-                                ${
-                                    movie.posterUrl
-                                        ? `<img src="${movie.posterUrl}" alt="${movie.title}" class="movie-poster">`
-                                        : `<div style="font-size: 3rem;">🎬</div>`
-                                }
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="text-xl font-semibold text-blue-200 mb-2">${movie.title}</h3>
-                                <p class="text-gray-400 mb-2">${movie.year || "Unknown"}</p>
-                                ${movie.overview ? `<p class="text-gray-300 text-sm">${movie.overview.substring(0, 100)}...</p>` : ""}
-                            </div>
-                        `;
-                            relatedMoviesList.appendChild(movieCard);
-                        });
-                    } else {
-                        displayError(
-                            relatedError,
-                            "No related movies found for the selected movie.",
-                        );
-                    }
-                } catch (error) {
-                    loadingRelated.classList.add("hidden");
-                    displayError(
-                        relatedError,
-                        `Error fetching related movies: ${error.message}`,
-                    );
-                    console.error("Related movies error:", error);
-                }
-            }
-
-            /**
-             * Clears all results and resets the interface.
-             */
-            function clearResults() {
-                movieList.innerHTML = "";
-                relatedMoviesList.innerHTML = "";
-                movieDetailsContent.innerHTML = "";
-                searchResults.classList.add("hidden");
-                selectedMovieDetails.classList.add("hidden");
-                relatedMoviesSection.classList.add("hidden");
-                selectedMovieTraktId = null;
-                hideError(searchError);
-                hideError(relatedError);
-            }
-
-            /**
-             * Displays an error message.
-             */
-            function displayError(element, message) {
-                element.textContent = message;
-                element.classList.remove("hidden");
-            }
-
-            /**
-             * Hides an error message.
-             */
-            function hideError(element) {
-                element.classList.add("hidden");
-                element.textContent = "";
-            }
-
-            // Event Listeners
-            searchMovieBtn.addEventListener("click", searchMovie);
-            movieTitleInput.addEventListener("keypress", (e) => {
-                if (e.key === "Enter") {
-                    searchMovie();
-                }
-            });
-            getRelatedMoviesBtn.addEventListener("click", getRelatedMovies);
-
-            // Filter tabs
-            document.querySelectorAll(".filter-tab").forEach((tab) => {
-                tab.addEventListener("click", (e) => {
-                    document
-                        .querySelectorAll(".filter-tab")
-                        .forEach((t) => t.classList.remove("active"));
-                    e.target.classList.add("active");
-                    currentSortBy = e.target.dataset.sort;
-                    displaySearchResults();
+                const sortedNodes = [...this.nodes].sort((a, b) => {
+                    if (a.depth !== b.depth) return a.depth - b.depth;
+                    // Sort by rating if available, then by title
+                    const aRating = (a.fullDetails?.rating || a.basicDetails?.rating || 0);
+                    const bRating = (b.fullDetails?.rating || b.basicDetails?.rating || 0);
+                    if (aRating !== bRating) return bRating - aRating;
+                    return a.title.localeCompare(b.title);
                 });
-            });
 
-            // Check backend health on load
-            async function checkBackendHealth() {
+                movieList.innerHTML = sortedNodes.map(node => {
+                    const details = node.fullDetails || node.basicDetails || {};
+                    const rating = details.rating ? `⭐ ${details.rating.toFixed(1)}` : '';
+                    const genres = details.genres ? details.genres.slice(0, 2).join(', ') : '';
+                    const runtime = details.runtime ? `${details.runtime}min` : '';
+                    const watchers = details.stats?.watchers ? `${(details.stats.watchers / 1000).toFixed(0)}K` : '';
+                    
+                    return `
+                        <div class="movie-item" onclick="network.focusOnNode(${node.id})" onmouseover="network.showMoviePreview(${node.id})" onmouseout="network.hideMoviePreview()">
+                            <div class="movie-header">
+                                <div class="movie-title">${node.title}</div>
+                                <div class="movie-rating">${rating}</div>
+                            </div>
+                            <div class="movie-meta">
+                                <span class="movie-year">${node.year}</span>
+                                ${runtime ? `<span class="movie-runtime">• ${runtime}</span>` : ''}
+                                ${watchers ? `<span class="movie-watchers">• ${watchers} watchers</span>` : ''}
+                            </div>
+                            ${genres ? `<div class="movie-genres">${genres}</div>` : ''}
+                            <div class="movie-depth">Depth: ${node.depth}</div>
+                            ${!node.fullDetails ? '<div class="load-details" onclick="event.stopPropagation(); network.loadMovieDetails(' + node.id + ')">📄 Load Details</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateStats() {
+                const stats = document.getElementById('networkStats');
+                stats.textContent = `${this.nodes.length} movies, ${this.links.length} connections`;
+            }
+
+            focusOnNode(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                const transform = d3.zoomIdentity
+                    .translate(this.width / 2 - node.x, this.height / 2 - node.y)
+                    .scale(1.5);
+
+                this.svg.transition()
+                    .duration(750)
+                    .call(this.zoom.transform, transform);
+            }
+
+            async searchAndAddMovie() {
+                const searchInput = document.getElementById('movieSearch');
+                const query = searchInput.value.trim();
+                
+                if (!query) return;
+
+                this.showLoading(true);
+                
                 try {
-                    const health = await fetchBackendApi("/health");
-                    if (!health.trakt_api_configured) {
-                        displayError(
-                            searchError,
-                            "Backend is not properly configured. Please check your API keys.",
-                        );
+                    const movie = await this.searchMovie(query);
+                    
+                    if (movie) {
+                        // Get full details for the searched movie
+                        const fullDetails = await this.getFullMovieDetails(movie.ids.trakt);
+                        const node = this.addMovieToNetwork(movie, 0, true, fullDetails);
+                        this.showNotification(`Added "${movie.title}" to network!`, 'success');
+                        searchInput.value = '';
+                        
+                        // Focus on the new node
+                        setTimeout(() => this.focusOnNode(node.id), 500);
+                    } else {
+                        this.showNotification('Movie not found', 'error');
                     }
                 } catch (error) {
-                    displayError(
-                        searchError,
-                        "Cannot connect to backend. Please make sure the backend server is running on " + API_BASE_URL,
-                    );
+                    this.showNotification('Search failed', 'error');
+                } finally {
+                    this.showLoading(false);
                 }
+            }
+
+            clearNetwork() {
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap.clear();
+                this.nextNodeId = 0;
+                
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+                
+                this.showNotification('Network cleared', 'success');
+            }
+
+            centerNetwork() {
+                const transform = d3.zoomIdentity.translate(this.width / 2, this.height / 2).scale(1);
+                this.svg.transition().duration(750).call(this.zoom.transform, transform);
+            }
+
+            toggleLabels() {
+                this.showLabels = !this.showLabels;
+                this.labelContainer.selectAll('text')
+                    .style('display', this.showLabels ? 'block' : 'none');
+            }
+
+            showLoading(show) {
+                const loading = document.getElementById('loadingIndicator');
+                loading.style.display = show ? 'block' : 'none';
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            // Network Storage Methods
+            async saveNetworkToServer(name, description) {
+                try {
+                    const networkData = {
+                        name: name,
+                        description: description,
+                        nodes: this.nodes,
+                        links: this.links.map(link => ({
+                            source: typeof link.source === 'object' ? link.source.id : link.source,
+                            target: typeof link.target === 'object' ? link.target.id : link.target
+                        })),
+                        settings: {
+                            showLabels: this.showLabels,
+                            colorScheme: 'default'
+                        },
+                        seedMovie: this.nodes.find(n => n.depth === 0)?.title || null
+                    };
+
+                    const response = await fetch(`/api/networks/save`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(networkData)
+                    });
+
+                    if (!response.ok) throw new Error('Failed to save network');
+                    
+                    const result = await response.json();
+                    return result;
+
+                } catch (error) {
+                    console.error('Save error:', error);
+                    throw error;
+                }
+            }
+
+            async loadNetworkFromServer(networkId) {
+                try {
+                    const response = await fetch(`/api/networks/${networkId}`);
+                    if (!response.ok) throw new Error('Failed to load network');
+                    
+                    const networkData = await response.json();
+                    return networkData;
+
+                } catch (error) {
+                    console.error('Load error:', error);
+                    throw error;
+                }
+            }
+
+            async getSavedNetworks() {
+                try {
+                    const response = await fetch(`/api/networks`);
+                    if (!response.ok) throw new Error('Failed to get saved networks');
+                    
+                    const networks = await response.json();
+                    return networks;
+
+                } catch (error) {
+                    console.error('Get networks error:', error);
+                    return [];
+                }
+            }
+
+            async deleteNetworkFromServer(networkId) {
+                try {
+                    const response = await fetch(`/api/networks/${networkId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to delete network');
+                    
+                    const result = await response.json();
+                    return result;
+
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    throw error;
+                }
+            }
+
+            loadNetworkData(networkData) {
+                // Clear current network
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap.clear();
+                this.nextNodeId = 0;
+
+                // Load nodes
+                networkData.nodes.forEach(nodeData => {
+                    const node = {
+                        ...nodeData,
+                        id: this.nextNodeId++,
+                        x: this.width / 2 + (Math.random() - 0.5) * 400,
+                        y: this.height / 2 + (Math.random() - 0.5) * 400
+                    };
+                    this.nodes.push(node);
+                    this.nodeMap.set(node.movieKey, node);
+                });
+
+                // Load links
+                networkData.links.forEach(linkData => {
+                    const sourceNode = this.nodes.find(n => n.id === linkData.source);
+                    const targetNode = this.nodes.find(n => n.id === linkData.target);
+                    
+                    if (sourceNode && targetNode) {
+                        this.addConnection(sourceNode, targetNode, false);
+                    }
+                });
+
+                // Apply settings
+                if (networkData.settings) {
+                    this.showLabels = networkData.settings.showLabels !== false;
+                }
+
+                // Update visualization
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+
+                // Center the network
+                setTimeout(() => this.centerNetwork(), 1000);
+            }
+
+            async loadMovieDetails(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node || node.fullDetails) return;
+
+                this.showLoading(true);
+                
+                try {
+                    const fullDetails = await this.getFullMovieDetails(node.traktId);
+                    if (fullDetails) {
+                        node.fullDetails = fullDetails;
+                        this.updateSidebar();
+                        this.showNotification(`Loaded details for ${node.title}`, 'success');
+                    }
+                } catch (error) {
+                    this.showNotification('Failed to load movie details', 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            showMoviePreview(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                // Highlight the node in the network
+                this.nodeContainer.selectAll('circle')
+                    .style('opacity', d => d.id === nodeId ? 1 : 0.3)
+                    .style('stroke-width', d => d.id === nodeId ? 4 : 2);
+
+                this.labelContainer.selectAll('text')
+                    .style('opacity', d => d.id === nodeId ? 1 : 0.3);
+            }
+
+            hideMoviePreview() {
+                // Reset all nodes to normal opacity
+                this.nodeContainer.selectAll('circle')
+                    .style('opacity', 1)
+                    .style('stroke-width', 2);
+
+                this.labelContainer.selectAll('text')
+                    .style('opacity', 1);
+            }
+        }
+
+        // Global functions for button clicks
+        let network;
+
+        function searchAndAddMovie() {
+            console.log('searchAndAddMovie called');
+            if (!network) {
+                console.error('Network not initialized');
+                alert('❌ Network not initialized. Please refresh the page.');
+                return;
+            }
+            try {
+                network.searchAndAddMovie();
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('❌ Search failed: ' + error.message);
+            }
+        }
+
+        function clearNetwork() {
+            console.log('clearNetwork called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
+            network.clearNetwork();
+        }
+
+        function centerNetwork() {
+            console.log('centerNetwork called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
+            network.centerNetwork();
+        }
+
+        function toggleLabels() {
+            console.log('toggleLabels called');
+            if (!network) {
+                alert('❌ Network not initialized');
+                return;
+            }
+            network.toggleLabels();
+        }
+
+        // Save/Load Dialog Functions
+        function showSaveDialog() {
+            if (network.nodes.length === 0) {
+                network.showNotification('No network to save', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('saveModal');
+            const preview = document.getElementById('savePreview');
+            
+            // Generate preview
+            const totalMovies = network.nodes.length;
+            const totalConnections = network.links.length;
+            const seedMovie = network.nodes.find(n => n.depth === 0)?.title || 'Unknown';
+            const genres = [...new Set(network.nodes.flatMap(n => {
+                const details = n.fullDetails || n.basicDetails || {};
+                return details.genres || [];
+            }))];
+            
+            preview.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 13px;">
+                    <div><strong>Movies:</strong> ${totalMovies}</div>
+                    <div><strong>Connections:</strong> ${totalConnections}</div>
+                    <div><strong>Seed Movie:</strong> ${seedMovie}</div>
+                    <div><strong>Max Depth:</strong> ${Math.max(...network.nodes.map(n => n.depth))}</div>
+                </div>
+                ${genres.length > 0 ? `<div style="margin-top: 10px;"><strong>Genres:</strong> ${genres.slice(0, 5).join(', ')}${genres.length > 5 ? '...' : ''}</div>` : ''}
+            `;
+            
+            // Suggest a name based on seed movie
+            const nameInput = document.getElementById('networkName');
+            nameInput.value = seedMovie ? `${seedMovie} Network` : 'Movie Network';
+            
+            modal.style.display = 'flex';
+            nameInput.focus();
+        }
+
+        function closeSaveDialog() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+
+        async function saveNetwork() {
+            const name = document.getElementById('networkName').value.trim();
+            const description = document.getElementById('networkDescription').value.trim();
+            
+            if (!name) {
+                network.showNotification('Please enter a network name', 'error');
+                return;
+            }
+
+            network.showLoading(true);
+            
+            try {
+                const result = await network.saveNetworkToServer(name, description);
+                
+                if (result.success) {
+                    network.showNotification(`Network "${name}" saved successfully!`, 'success');
+                    closeSaveDialog();
+                    
+                    // Clear form
+                    document.getElementById('networkName').value = '';
+                    document.getElementById('networkDescription').value = '';
+                } else {
+                    network.showNotification('Failed to save network', 'error');
+                }
+                
+            } catch (error) {
+                network.showNotification('Failed to save network', 'error');
+            } finally {
+                network.showLoading(false);
+            }
+        }
+
+        async function showLoadDialog() {
+            const modal = document.getElementById('loadModal');
+            modal.style.display = 'flex';
+            
+            await refreshNetworksList();
+        }
+
+        function closeLoadDialog() {
+            document.getElementById('loadModal').style.display = 'none';
+        }
+
+        async function refreshNetworksList() {
+            const listContainer = document.getElementById('savedNetworksList');
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading saved networks...</div>';
+            
+            try {
+                const networks = await network.getSavedNetworks();
+                
+                if (networks.length === 0) {
+                    listContainer.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📂</div>
+                            <div>No saved networks found</div>
+                            <div style="font-size: 12px; margin-top: 8px;">Create and save a network to see it here</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listContainer.innerHTML = networks.map(net => {
+                    const createdDate = new Date(net.createdAt).toLocaleDateString();
+                    const createdTime = new Date(net.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    return `
+                        <div class="saved-network-item" onclick="selectNetwork('${net.id}')">
+                            <div class="network-item-header">
+                                <div class="network-item-title">${net.name}</div>
+                                <div class="network-item-date">${createdDate} ${createdTime}</div>
+                            </div>
+                            ${net.description ? `<div class="network-item-description">${net.description}</div>` : ''}
+                            <div class="network-item-stats">
+                                <span>🎬 ${net.metadata.totalMovies} movies</span>
+                                <span>🔗 ${net.metadata.totalConnections} connections</span>
+                                <span>⭐ ${net.metadata.averageRating || 'N/A'}</span>
+                                <span>📊 Depth ${net.metadata.maxDepth}</span>
+                            </div>
+                            <div class="network-item-actions">
+                                <button class="action-btn" onclick="event.stopPropagation(); loadSelectedNetwork('${net.id}')">
+                                    📂 Load
+                                </button>
+                                <button class="action-btn" onclick="event.stopPropagation(); exportNetwork('${net.id}', 'json')">
+                                    📤 Export
+                                </button>
+                                <button class="action-btn danger" onclick="event.stopPropagation(); deleteNetwork('${net.id}')">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                listContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--accent-color);">
+                        Failed to load saved networks
+                    </div>
+                `;
+            }
+        }
+
+        let selectedNetworkId = null;
+
+        function selectNetwork(networkId) {
+            // Remove previous selection
+            document.querySelectorAll('.saved-network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.currentTarget.classList.add('selected');
+            selectedNetworkId = networkId;
+        }
+
+        async function loadSelectedNetwork(networkId) {
+            network.showLoading(true);
+            
+            try {
+                const networkData = await network.loadNetworkFromServer(networkId);
+                network.loadNetworkData(networkData);
+                
+                network.showNotification(`Network "${networkData.name}" loaded successfully!`, 'success');
+                closeLoadDialog();
+                
+            } catch (error) {
+                network.showNotification('Failed to load network', 'error');
+            } finally {
+                network.showLoading(false);
+            }
+        }
+
+        async function deleteNetwork(networkId) {
+            if (!confirm('Are you sure you want to delete this network? This action cannot be undone.')) {
+                return;
             }
             
-            // Check backend on load
-            checkBackendHealth();
-        </script>
-    </body>
+            try {
+                await network.deleteNetworkFromServer(networkId);
+                network.showNotification('Network deleted successfully', 'success');
+                refreshNetworksList();
+                
+            } catch (error) {
+                network.showNotification('Failed to delete network', 'error');
+            }
+        }
+
+        async function exportNetwork(networkId, format) {
+            try {
+                const response = await fetch(`/api/networks/${networkId}/export/${format}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `network.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    network.showNotification(`Network exported as ${format.toUpperCase()}`, 'success');
+                } else {
+                    network.showNotification('Failed to export network', 'error');
+                }
+                
+            } catch (error) {
+                network.showNotification('Failed to export network', 'error');
+            }
+        }
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            const saveModal = document.getElementById('saveModal');
+            const loadModal = document.getElementById('loadModal');
+            
+            if (event.target === saveModal) {
+                closeSaveDialog();
+            }
+            if (event.target === loadModal) {
+                closeLoadDialog();
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing Dynamic Movie Network...');
+            
+            // Check if D3 is loaded
+            if (typeof d3 === 'undefined') {
+                console.error('D3.js failed to load from CDN');
+                document.body.innerHTML += '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 20px; border-radius: 10px; z-index: 9999;">❌ D3.js failed to load. Check internet connection.</div>';
+                return;
+            }
+            
+            try {
+                network = new DynamicMovieNetwork();
+                console.log('✅ Network initialized successfully');
+            } catch (error) {
+                console.error('❌ Network initialization failed:', error);
+                document.body.innerHTML += '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 20px; border-radius: 10px; z-index: 9999;">❌ Network initialization failed: ' + error.message + '</div>';
+            }
+        });
+    </script>
+</body>
 </html>
