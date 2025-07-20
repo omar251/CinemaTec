@@ -400,7 +400,7 @@ app.get('/api/movies/:traktId', setCacheHeaders, async (req, res) => {
   const traktId = req.params.traktId;
   
   try {
-    const movieDetails = await makeTraktRequest(`/movies/${traktId}`);
+    const movieDetails = await makeTraktRequest(`/movies/${traktId}`, { extended: 'full' });
     if (!movieDetails) {
       return res.status(404).json({ error: 'Movie not found' });
     }
@@ -408,6 +408,35 @@ app.get('/api/movies/:traktId', setCacheHeaders, async (req, res) => {
   } catch (error) {
     log.error(`Error getting movie details: ${error.message}`);
     res.status(500).json({ error: 'Failed to get movie details' });
+  }
+});
+
+// Get movie details with full extended data (explicit endpoint)
+app.get('/api/movies/:traktId/full', setCacheHeaders, async (req, res) => {
+  const traktId = req.params.traktId;
+  
+  try {
+    const movieDetails = await makeTraktRequest(`/movies/${traktId}`, { extended: 'full' });
+    if (!movieDetails) {
+      return res.status(404).json({ error: 'Movie not found' });
+    }
+    
+    // Also get stats and ratings for complete data
+    const [stats, ratings] = await Promise.allSettled([
+      makeTraktRequest(`/movies/${traktId}/stats`),
+      makeTraktRequest(`/movies/${traktId}/ratings`)
+    ]);
+    
+    const fullMovieData = {
+      ...movieDetails,
+      stats: stats.status === 'fulfilled' ? stats.value : null,
+      ratings: ratings.status === 'fulfilled' ? ratings.value : null
+    };
+    
+    res.json(fullMovieData);
+  } catch (error) {
+    log.error(`Error getting full movie details: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get full movie details' });
   }
 });
 
