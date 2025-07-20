@@ -4,6 +4,7 @@ const axios = require('axios');
 const helmet = require('helmet');
 const compression = require('compression');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const NetworkStorage = require('./scripts/network_storage');
 require('dotenv').config();
 
 // Simple in-memory cache implementation
@@ -61,6 +62,9 @@ class MemoryCache {
 const apiCache = new MemoryCache(300000); // 5 minutes for API responses
 const enhancedCache = new MemoryCache(600000); // 10 minutes for enhanced data
 const aiCache = new MemoryCache(1800000); // 30 minutes for AI responses
+
+// Initialize network storage
+const networkStorage = new NetworkStorage('file', { dataDir: 'saved_networks' });
 
 // Cache cleanup interval (every 5 minutes)
 setInterval(() => {
@@ -639,6 +643,159 @@ app.post('/api/cache/clear', (req, res) => {
   }
 });
 
+// Network Storage Endpoints
+
+// Save network
+app.post('/api/networks/save', async (req, res) => {
+  try {
+    const { name, description, nodes, links, settings, seedMovie } = req.body;
+    
+    if (!nodes || !Array.isArray(nodes)) {
+      return res.status(400).json({ error: 'Nodes array is required' });
+    }
+
+    const networkData = {
+      name: name || 'Untitled Network',
+      description: description || '',
+      nodes,
+      links: links || [],
+      settings: settings || {},
+      seedMovie: seedMovie || null
+    };
+
+    const result = await networkStorage.saveNetworkToFile(networkData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        networkId: result.id,
+        message: 'Network saved successfully',
+        metadata: result.metadata
+      });
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error saving network: ${error.message}`);
+    res.status(500).json({ error: 'Failed to save network' });
+  }
+});
+
+// Load network
+app.get('/api/networks/:networkId', async (req, res) => {
+  try {
+    const { networkId } = req.params;
+    const result = await networkStorage.loadNetworkFromFile(networkId);
+    
+    if (result.success) {
+      res.json(result.data);
+    } else {
+      res.status(404).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error loading network: ${error.message}`);
+    res.status(500).json({ error: 'Failed to load network' });
+  }
+});
+
+// List all networks
+app.get('/api/networks', async (req, res) => {
+  try {
+    const result = await networkStorage.listNetworks();
+    
+    if (result.success) {
+      res.json(result.networks);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error listing networks: ${error.message}`);
+    res.status(500).json({ error: 'Failed to list networks' });
+  }
+});
+
+// Update network
+app.put('/api/networks/:networkId', async (req, res) => {
+  try {
+    const { networkId } = req.params;
+    const updateData = req.body;
+    
+    const result = await networkStorage.updateNetwork(networkId, updateData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Network updated successfully',
+        metadata: result.metadata
+      });
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error updating network: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update network' });
+  }
+});
+
+// Delete network
+app.delete('/api/networks/:networkId', async (req, res) => {
+  try {
+    const { networkId } = req.params;
+    const result = await networkStorage.deleteNetwork(networkId);
+    
+    if (result.success) {
+      res.json({ success: true, message: 'Network deleted successfully' });
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error deleting network: ${error.message}`);
+    res.status(500).json({ error: 'Failed to delete network' });
+  }
+});
+
+// Export network
+app.get('/api/networks/:networkId/export/:format', async (req, res) => {
+  try {
+    const { networkId, format } = req.params;
+    const result = await networkStorage.exportNetwork(networkId, format);
+    
+    if (result.success) {
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.data);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error exporting network: ${error.message}`);
+    res.status(500).json({ error: 'Failed to export network' });
+  }
+});
+
+// Get storage statistics
+app.get('/api/networks/stats/storage', async (req, res) => {
+  try {
+    const result = await networkStorage.getStorageStats();
+    
+    if (result.success) {
+      res.json(result.stats);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+
+  } catch (error) {
+    log.error(`Error getting storage stats: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get storage statistics' });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -648,6 +805,7 @@ app.get('/api/health', (req, res) => {
     gemini_api_configured: !!GEMINI_API_KEY,
     optimization: 'enabled',
     runtime: 'Node.js',
+    storage: 'file-based',
     caching: {
       enabled: true,
       api_cache_size: apiCache.size(),

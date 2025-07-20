@@ -378,6 +378,224 @@
             color: var(--text-secondary);
         }
 
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--gemini-accent);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .network-preview {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .network-preview h4 {
+            margin: 0 0 10px 0;
+            color: var(--gemini-accent);
+            font-size: 14px;
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(45deg, var(--success-color), var(--gemini-accent));
+        }
+
+        .saved-networks {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .saved-network-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .saved-network-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .saved-network-item.selected {
+            border-color: var(--gemini-accent);
+            background: rgba(246, 224, 94, 0.1);
+        }
+
+        .network-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .network-item-title {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .network-item-date {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .network-item-description {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .network-item-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .network-item-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .action-btn.danger {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .action-btn.danger:hover {
+            background: rgba(233, 69, 96, 0.1);
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -402,6 +620,11 @@
             .network-container {
                 bottom: 220px;
             }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
         }
     </style>
 </head>
@@ -414,6 +637,8 @@
         </div>
         <div class="controls">
             <div class="stats" id="networkStats">0 movies, 0 connections</div>
+            <button class="control-btn" onclick="showSaveDialog()">💾 Save</button>
+            <button class="control-btn" onclick="showLoadDialog()">📂 Load</button>
             <button class="control-btn" onclick="clearNetwork()">🗑️ Clear</button>
             <button class="control-btn" onclick="centerNetwork()">🎯 Center</button>
             <button class="control-btn" onclick="toggleLabels()">🏷️ Labels</button>
@@ -452,6 +677,53 @@
     </div>
 
     <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <!-- Save Dialog -->
+    <div class="modal" id="saveModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💾 Save Network</h3>
+                <button class="close-btn" onclick="closeSaveDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="networkName">Network Name:</label>
+                    <input type="text" id="networkName" placeholder="Enter network name..." />
+                </div>
+                <div class="form-group">
+                    <label for="networkDescription">Description (optional):</label>
+                    <textarea id="networkDescription" placeholder="Describe your network..."></textarea>
+                </div>
+                <div class="network-preview">
+                    <h4>Network Summary:</h4>
+                    <div id="savePreview">Loading...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" onclick="closeSaveDialog()">Cancel</button>
+                <button class="control-btn primary" onclick="saveNetwork()">💾 Save Network</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Dialog -->
+    <div class="modal" id="loadModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📂 Load Network</h3>
+                <button class="close-btn" onclick="closeLoadDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="saved-networks" id="savedNetworksList">
+                    Loading saved networks...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" onclick="closeLoadDialog()">Cancel</button>
+                <button class="control-btn" onclick="refreshNetworksList()">🔄 Refresh</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         class DynamicMovieNetwork {
@@ -927,6 +1199,131 @@
                 }, 3000);
             }
 
+            // Network Storage Methods
+            async saveNetworkToServer(name, description) {
+                try {
+                    const networkData = {
+                        name: name,
+                        description: description,
+                        nodes: this.nodes,
+                        links: this.links.map(link => ({
+                            source: typeof link.source === 'object' ? link.source.id : link.source,
+                            target: typeof link.target === 'object' ? link.target.id : link.target
+                        })),
+                        settings: {
+                            showLabels: this.showLabels,
+                            colorScheme: 'default'
+                        },
+                        seedMovie: this.nodes.find(n => n.depth === 0)?.title || null
+                    };
+
+                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/save`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(networkData)
+                    });
+
+                    if (!response.ok) throw new Error('Failed to save network');
+                    
+                    const result = await response.json();
+                    return result;
+
+                } catch (error) {
+                    console.error('Save error:', error);
+                    throw error;
+                }
+            }
+
+            async loadNetworkFromServer(networkId) {
+                try {
+                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/${networkId}`);
+                    if (!response.ok) throw new Error('Failed to load network');
+                    
+                    const networkData = await response.json();
+                    return networkData;
+
+                } catch (error) {
+                    console.error('Load error:', error);
+                    throw error;
+                }
+            }
+
+            async getSavedNetworks() {
+                try {
+                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks`);
+                    if (!response.ok) throw new Error('Failed to get saved networks');
+                    
+                    const networks = await response.json();
+                    return networks;
+
+                } catch (error) {
+                    console.error('Get networks error:', error);
+                    return [];
+                }
+            }
+
+            async deleteNetworkFromServer(networkId) {
+                try {
+                    const response = await fetch(`${this.apiBase.replace('/api', '')}/api/networks/${networkId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to delete network');
+                    
+                    const result = await response.json();
+                    return result;
+
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    throw error;
+                }
+            }
+
+            loadNetworkData(networkData) {
+                // Clear current network
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap.clear();
+                this.nextNodeId = 0;
+
+                // Load nodes
+                networkData.nodes.forEach(nodeData => {
+                    const node = {
+                        ...nodeData,
+                        id: this.nextNodeId++,
+                        x: this.width / 2 + (Math.random() - 0.5) * 400,
+                        y: this.height / 2 + (Math.random() - 0.5) * 400
+                    };
+                    this.nodes.push(node);
+                    this.nodeMap.set(node.movieKey, node);
+                });
+
+                // Load links
+                networkData.links.forEach(linkData => {
+                    const sourceNode = this.nodes.find(n => n.id === linkData.source);
+                    const targetNode = this.nodes.find(n => n.id === linkData.target);
+                    
+                    if (sourceNode && targetNode) {
+                        this.addConnection(sourceNode, targetNode, false);
+                    }
+                });
+
+                // Apply settings
+                if (networkData.settings) {
+                    this.showLabels = networkData.settings.showLabels !== false;
+                }
+
+                // Update visualization
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+
+                // Center the network
+                setTimeout(() => this.centerNetwork(), 1000);
+            }
+
             async loadMovieDetails(nodeId) {
                 const node = this.nodes.find(n => n.id === nodeId);
                 if (!node || node.fullDetails) return;
@@ -989,6 +1386,232 @@
         function toggleLabels() {
             network.toggleLabels();
         }
+
+        // Save/Load Dialog Functions
+        function showSaveDialog() {
+            if (network.nodes.length === 0) {
+                network.showNotification('No network to save', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('saveModal');
+            const preview = document.getElementById('savePreview');
+            
+            // Generate preview
+            const totalMovies = network.nodes.length;
+            const totalConnections = network.links.length;
+            const seedMovie = network.nodes.find(n => n.depth === 0)?.title || 'Unknown';
+            const genres = [...new Set(network.nodes.flatMap(n => {
+                const details = n.fullDetails || n.basicDetails || {};
+                return details.genres || [];
+            }))];
+            
+            preview.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 13px;">
+                    <div><strong>Movies:</strong> ${totalMovies}</div>
+                    <div><strong>Connections:</strong> ${totalConnections}</div>
+                    <div><strong>Seed Movie:</strong> ${seedMovie}</div>
+                    <div><strong>Max Depth:</strong> ${Math.max(...network.nodes.map(n => n.depth))}</div>
+                </div>
+                ${genres.length > 0 ? `<div style="margin-top: 10px;"><strong>Genres:</strong> ${genres.slice(0, 5).join(', ')}${genres.length > 5 ? '...' : ''}</div>` : ''}
+            `;
+            
+            // Suggest a name based on seed movie
+            const nameInput = document.getElementById('networkName');
+            nameInput.value = seedMovie ? `${seedMovie} Network` : 'Movie Network';
+            
+            modal.style.display = 'flex';
+            nameInput.focus();
+        }
+
+        function closeSaveDialog() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+
+        async function saveNetwork() {
+            const name = document.getElementById('networkName').value.trim();
+            const description = document.getElementById('networkDescription').value.trim();
+            
+            if (!name) {
+                network.showNotification('Please enter a network name', 'error');
+                return;
+            }
+
+            network.showLoading(true);
+            
+            try {
+                const result = await network.saveNetworkToServer(name, description);
+                
+                if (result.success) {
+                    network.showNotification(`Network "${name}" saved successfully!`, 'success');
+                    closeSaveDialog();
+                    
+                    // Clear form
+                    document.getElementById('networkName').value = '';
+                    document.getElementById('networkDescription').value = '';
+                } else {
+                    network.showNotification('Failed to save network', 'error');
+                }
+                
+            } catch (error) {
+                network.showNotification('Failed to save network', 'error');
+            } finally {
+                network.showLoading(false);
+            }
+        }
+
+        async function showLoadDialog() {
+            const modal = document.getElementById('loadModal');
+            modal.style.display = 'flex';
+            
+            await refreshNetworksList();
+        }
+
+        function closeLoadDialog() {
+            document.getElementById('loadModal').style.display = 'none';
+        }
+
+        async function refreshNetworksList() {
+            const listContainer = document.getElementById('savedNetworksList');
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading saved networks...</div>';
+            
+            try {
+                const networks = await network.getSavedNetworks();
+                
+                if (networks.length === 0) {
+                    listContainer.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📂</div>
+                            <div>No saved networks found</div>
+                            <div style="font-size: 12px; margin-top: 8px;">Create and save a network to see it here</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listContainer.innerHTML = networks.map(net => {
+                    const createdDate = new Date(net.createdAt).toLocaleDateString();
+                    const createdTime = new Date(net.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    return `
+                        <div class="saved-network-item" onclick="selectNetwork('${net.id}')">
+                            <div class="network-item-header">
+                                <div class="network-item-title">${net.name}</div>
+                                <div class="network-item-date">${createdDate} ${createdTime}</div>
+                            </div>
+                            ${net.description ? `<div class="network-item-description">${net.description}</div>` : ''}
+                            <div class="network-item-stats">
+                                <span>🎬 ${net.metadata.totalMovies} movies</span>
+                                <span>🔗 ${net.metadata.totalConnections} connections</span>
+                                <span>⭐ ${net.metadata.averageRating || 'N/A'}</span>
+                                <span>📊 Depth ${net.metadata.maxDepth}</span>
+                            </div>
+                            <div class="network-item-actions">
+                                <button class="action-btn" onclick="event.stopPropagation(); loadSelectedNetwork('${net.id}')">
+                                    📂 Load
+                                </button>
+                                <button class="action-btn" onclick="event.stopPropagation(); exportNetwork('${net.id}', 'json')">
+                                    📤 Export
+                                </button>
+                                <button class="action-btn danger" onclick="event.stopPropagation(); deleteNetwork('${net.id}')">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                listContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--accent-color);">
+                        Failed to load saved networks
+                    </div>
+                `;
+            }
+        }
+
+        let selectedNetworkId = null;
+
+        function selectNetwork(networkId) {
+            // Remove previous selection
+            document.querySelectorAll('.saved-network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.currentTarget.classList.add('selected');
+            selectedNetworkId = networkId;
+        }
+
+        async function loadSelectedNetwork(networkId) {
+            network.showLoading(true);
+            
+            try {
+                const networkData = await network.loadNetworkFromServer(networkId);
+                network.loadNetworkData(networkData);
+                
+                network.showNotification(`Network "${networkData.name}" loaded successfully!`, 'success');
+                closeLoadDialog();
+                
+            } catch (error) {
+                network.showNotification('Failed to load network', 'error');
+            } finally {
+                network.showLoading(false);
+            }
+        }
+
+        async function deleteNetwork(networkId) {
+            if (!confirm('Are you sure you want to delete this network? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                await network.deleteNetworkFromServer(networkId);
+                network.showNotification('Network deleted successfully', 'success');
+                refreshNetworksList();
+                
+            } catch (error) {
+                network.showNotification('Failed to delete network', 'error');
+            }
+        }
+
+        async function exportNetwork(networkId, format) {
+            try {
+                const response = await fetch(`${network.apiBase.replace('/api', '')}/api/networks/${networkId}/export/${format}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `network.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    network.showNotification(`Network exported as ${format.toUpperCase()}`, 'success');
+                } else {
+                    network.showNotification('Failed to export network', 'error');
+                }
+                
+            } catch (error) {
+                network.showNotification('Failed to export network', 'error');
+            }
+        }
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            const saveModal = document.getElementById('saveModal');
+            const loadModal = document.getElementById('loadModal');
+            
+            if (event.target === saveModal) {
+                closeSaveDialog();
+            }
+            if (event.target === loadModal) {
+                closeLoadDialog();
+            }
+        });
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {

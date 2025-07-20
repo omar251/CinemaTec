@@ -1,0 +1,1912 @@
+{
+  "id": "batman_network_1753011350930_f263f09b",
+  "name": "Batman Network",
+  "description": "",
+  "createdAt": "2025-07-20T11:35:50.930Z",
+  "updatedAt": "2025-07-20T11:35:50.930Z",
+  "metadata": {
+    "totalMovies": 74,
+    "totalConnections": 85,
+    "seedMovie": "Batman",
+    "maxDepth": 8,
+    "genres": [
+      "action",
+      "fantasy",
+      "superhero",
+      "crime",
+      "adventure",
+      "thriller",
+      "drama",
+      "science-fiction",
+      "romance"
+    ],
+    "averageRating": 7.3
+  },
+  "nodes": [
+    {
+      "id": 0,
+      "title": "Batman",
+      "year": 1989,
+      "traktId": 224,
+      "depth": 0,
+      "movieKey": "Batman_1989",
+      "x": -993.4866717006763,
+      "y": 779.2390483535083,
+      "isNew": false,
+      "fullDetails": {
+        "title": "Batman",
+        "year": 1989,
+        "ids": {
+          "trakt": 224,
+          "slug": "batman-1989",
+          "imdb": "tt0096895",
+          "tmdb": 268
+        },
+        "tagline": "Justice is always darkest before the dawn.",
+        "overview": "Batman must face his most ruthless nemesis when a deformed madman calling himself \"The Joker\" seizes control of Gotham's criminal underworld.",
+        "released": "1989-06-23",
+        "runtime": 126,
+        "country": "us",
+        "trailer": "https://youtube.com/watch?v=ygK7sAavO0c",
+        "homepage": null,
+        "status": "released",
+        "rating": 7.48571,
+        "votes": 13860,
+        "comment_count": 44,
+        "updated_at": "2025-07-19T16:44:47.000Z",
+        "language": "en",
+        "languages": [
+          "en",
+          "fr"
+        ],
+        "available_translations": [
+          "bg",
+          "ca",
+          "cs",
+          "da",
+          "de",
+          "el",
+          "en",
+          "es",
+          "fa",
+          "fi",
+          "fr",
+          "he",
+          "hi",
+          "hr",
+          "hu",
+          "it",
+          "ja",
+          "ko",
+          "lt",
+          "lv",
+          "mk",
+          "nl",
+          "no",
+          "pa",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "sk",
+          "sl",
+          "sr",
+          "sv",
+          "th",
+          "tr",
+          "uk",
+          "uz",
+          "vi",
+          "zh"
+        ],
+        "genres": [
+          "action",
+          "fantasy",
+          "superhero",
+          "crime"
+        ],
+        "subgenres": [
+          "vigilante",
+          "organized-crime",
+          "mobster",
+          "superhero"
+        ],
+        "certification": "PG-13",
+        "original_title": "Batman",
+        "after_credits": false,
+        "during_credits": false,
+        "stats": {
+          "watchers": 56454,
+          "plays": 65898,
+          "collectors": 243811,
+          "comments": 44,
+          "lists": 17580,
+          "votes": 13861,
+          "favorited": 181,
+          "recommended": 181
+        },
+        "ratings": {
+          "rating": 7.48561,
+          "votes": 13861,
+          "distribution": {
+            "0": 1,
+            "1": 105,
+            "2": 66,
+            "3": 66,
+            "4": 188,
+            "5": 496,
+            "6": 1857,
+            "7": 4172,
+            "8": 4064,
+            "9": 1219,
+            "10": 1625
+          }
+        }
+      },
+      "basicDetails": {},
+      "index": 0,
+      "vy": -0.0009928453124591298,
+      "vx": -0.010831286623308102,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 1,
+      "title": "The Dark Knight",
+      "year": 2008,
+      "traktId": 120,
+      "depth": 1,
+      "movieKey": "The Dark Knight_2008",
+      "x": -1003.1813138715521,
+      "y": 926.9305223327673,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 1,
+      "vy": -0.0008780599074262825,
+      "vx": -0.011098757158214814
+    },
+    {
+      "id": 2,
+      "title": "Superman",
+      "year": 1978,
+      "traktId": 1298,
+      "depth": 1,
+      "movieKey": "Superman_1978",
+      "x": -935.753248322125,
+      "y": 908.1464393795281,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 2,
+      "vy": -0.0009952293976011302,
+      "vx": -0.011025424437441549
+    },
+    {
+      "id": 3,
+      "title": "Spider-Man",
+      "year": 2002,
+      "traktId": 438,
+      "depth": 1,
+      "movieKey": "Spider-Man_2002",
+      "x": -1070.6286945354063,
+      "y": 908.2253923036469,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 3,
+      "vy": -0.0011534233969799463,
+      "vx": -0.011189489352317616
+    },
+    {
+      "id": 4,
+      "title": "Batman Returns",
+      "year": 1992,
+      "traktId": 300,
+      "depth": 1,
+      "movieKey": "Batman Returns_1992",
+      "x": -1120.0961027830988,
+      "y": 858.7026343631613,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 4,
+      "vy": -0.0013910546687360256,
+      "vx": -0.011062533379934148
+    },
+    {
+      "id": 5,
+      "title": "Batman Begins",
+      "year": 2005,
+      "traktId": 228,
+      "depth": 1,
+      "movieKey": "Batman Begins_2005",
+      "x": -1122.2189713925231,
+      "y": 722.993148125772,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 5,
+      "vy": -0.0012943409767749508,
+      "vx": -0.01069120263180442
+    },
+    {
+      "id": 6,
+      "title": "V for Vendetta",
+      "year": 2006,
+      "traktId": 595,
+      "depth": 1,
+      "movieKey": "V for Vendetta_2006",
+      "x": -742.1700510783904,
+      "y": 533.788714130321,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 6,
+      "vy": -0.0015418489327809852,
+      "vx": -0.010183466679502299,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 7,
+      "title": "The Crow",
+      "year": 1994,
+      "traktId": 4778,
+      "depth": 1,
+      "movieKey": "The Crow_1994",
+      "x": -1138.3173940857894,
+      "y": 791.1168648957412,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 7,
+      "vy": -0.0013981965155256879,
+      "vx": -0.011130694930042248
+    },
+    {
+      "id": 8,
+      "title": "Watchmen",
+      "year": 2009,
+      "traktId": 7729,
+      "depth": 1,
+      "movieKey": "Watchmen_2009",
+      "x": -885.9264478537923,
+      "y": 657.5041816376531,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 8,
+      "vy": -0.0010515430620050795,
+      "vx": -0.010363652118360973
+    },
+    {
+      "id": 9,
+      "title": "Equilibrium",
+      "year": 2002,
+      "traktId": 3879,
+      "depth": 2,
+      "movieKey": "Equilibrium_2002",
+      "x": -611.6427366930922,
+      "y": 517.771419474115,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 9,
+      "vy": -0.005440091075537238,
+      "vx": -0.010565957496918816
+    },
+    {
+      "id": 10,
+      "title": "Nineteen Eighty-Four",
+      "year": 1984,
+      "traktId": 4612,
+      "depth": 2,
+      "movieKey": "Nineteen Eighty-Four_1984",
+      "x": -847.4721043682863,
+      "y": 441.64762860797146,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 10,
+      "vy": -0.0014921206441779076,
+      "vx": -0.010207488422058455
+    },
+    {
+      "id": 11,
+      "title": "Brazil",
+      "year": 1985,
+      "traktId": 39,
+      "depth": 2,
+      "movieKey": "Brazil_1985",
+      "x": -879.2430374357608,
+      "y": 522.446057962707,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 11,
+      "vy": -0.0009748266271910864,
+      "vx": -0.009731972106596582
+    },
+    {
+      "id": 12,
+      "title": "Children of Men",
+      "year": 2006,
+      "traktId": 4965,
+      "depth": 2,
+      "movieKey": "Children of Men_2006",
+      "x": -773.8777962059473,
+      "y": 664.5253644219042,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 12,
+      "vy": -0.0023247037420664244,
+      "vx": -0.010845181876206247
+    },
+    {
+      "id": 13,
+      "title": "The Matrix",
+      "year": 1999,
+      "traktId": 481,
+      "depth": 2,
+      "movieKey": "The Matrix_1999",
+      "x": -654.0198513875471,
+      "y": 421.48219113777685,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 13,
+      "vy": -0.004374402705403236,
+      "vx": -0.010085900613931886
+    },
+    {
+      "id": 14,
+      "title": "Blade Runner",
+      "year": 1982,
+      "traktId": 48,
+      "depth": 2,
+      "movieKey": "Blade Runner_1982",
+      "x": -449.87354871926885,
+      "y": 338.65727159910244,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 14,
+      "vy": -0.001185831935176021,
+      "vx": -0.006948263272190596
+    },
+    {
+      "id": 15,
+      "title": "Minority Report",
+      "year": 2002,
+      "traktId": 145,
+      "depth": 2,
+      "movieKey": "Minority Report_2002",
+      "x": -494.2364114138225,
+      "y": 416.20780100150847,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 15,
+      "vy": -0.004559784214710304,
+      "vx": -0.009822630249118324,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 16,
+      "title": "xXx",
+      "year": 2002,
+      "traktId": 3912,
+      "depth": 0,
+      "movieKey": "xXx_2002",
+      "x": 2278.928145446089,
+      "y": 229.69197723473988,
+      "isNew": false,
+      "fullDetails": {
+        "title": "xXx",
+        "year": 2002,
+        "ids": {
+          "trakt": 3912,
+          "slug": "xxx-2002",
+          "imdb": "tt0295701",
+          "tmdb": 7451
+        },
+        "tagline": "A new breed of secret agent.",
+        "overview": "Xander Cage is your standard adrenaline junkie with no fear and a lousy attitude. When the US Government \"recruits\" him to go on a mission, he's not exactly thrilled. His mission: to gather information on an organization that may just be planning the destruction of the world, led by the nihilistic Yorgi.",
+        "released": "2002-08-09",
+        "runtime": 124,
+        "country": "us",
+        "trailer": "https://youtube.com/watch?v=NgPdDDzVhkA",
+        "homepage": "http://www.sonypictures.com/movies/xxx/",
+        "status": "released",
+        "rating": 6.46142,
+        "votes": 7516,
+        "comment_count": 12,
+        "updated_at": "2025-07-19T16:42:28.000Z",
+        "language": "en",
+        "languages": [
+          "cs",
+          "en",
+          "de",
+          "es",
+          "ru"
+        ],
+        "available_translations": [
+          "ar",
+          "bg",
+          "ca",
+          "cs",
+          "da",
+          "de",
+          "el",
+          "en",
+          "es",
+          "fa",
+          "fi",
+          "fr",
+          "he",
+          "hi",
+          "hr",
+          "hu",
+          "id",
+          "it",
+          "ja",
+          "ko",
+          "lt",
+          "lv",
+          "my",
+          "nl",
+          "no",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "sk",
+          "sl",
+          "sr",
+          "sv",
+          "th",
+          "tr",
+          "uk",
+          "vi",
+          "zh"
+        ],
+        "genres": [
+          "action",
+          "adventure",
+          "thriller",
+          "crime"
+        ],
+        "subgenres": [],
+        "certification": "PG-13",
+        "original_title": "xXx",
+        "after_credits": false,
+        "during_credits": false,
+        "stats": {
+          "watchers": 34431,
+          "plays": 38841,
+          "collectors": 185021,
+          "comments": 12,
+          "lists": 7968,
+          "votes": 7518,
+          "favorited": 33,
+          "recommended": 33
+        },
+        "ratings": {
+          "rating": 6.46103,
+          "votes": 7518,
+          "distribution": {
+            "1": 106,
+            "2": 158,
+            "3": 141,
+            "4": 514,
+            "5": 942,
+            "6": 2062,
+            "7": 1667,
+            "8": 1053,
+            "9": 239,
+            "10": 633
+          }
+        }
+      },
+      "basicDetails": {},
+      "index": 16,
+      "vy": 0.000323612742341659,
+      "vx": 0.00643131825041862,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 17,
+      "title": "The Fast and the Furious",
+      "year": 2001,
+      "traktId": 5058,
+      "depth": 1,
+      "movieKey": "The Fast and the Furious_2001",
+      "x": 2045.8417599806069,
+      "y": 187.4793523174132,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 17,
+      "vy": -0.001362283465627346,
+      "vx": 0.006210873615057503
+    },
+    {
+      "id": 18,
+      "title": "Mission: Impossible II",
+      "year": 2000,
+      "traktId": 794,
+      "depth": 1,
+      "movieKey": "Mission: Impossible II_2000",
+      "x": 2414.6609137446358,
+      "y": 175.19481801911306,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 18,
+      "vy": 0.000143449192860507,
+      "vx": 0.0067439111868446535
+    },
+    {
+      "id": 19,
+      "title": "Die Another Day",
+      "year": 2002,
+      "traktId": 23309,
+      "depth": 1,
+      "movieKey": "Die Another Day_2002",
+      "x": 2404.7484603387966,
+      "y": 310.12307935854346,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 19,
+      "vy": 0.00042665426724360127,
+      "vx": 0.006810122065077588
+    },
+    {
+      "id": 20,
+      "title": "The Bourne Identity",
+      "year": 2002,
+      "traktId": 1735,
+      "depth": 1,
+      "movieKey": "The Bourne Identity_2002",
+      "x": 2427.645124900078,
+      "y": 243.97668642493613,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 20,
+      "vy": 0.0002614971363669968,
+      "vx": 0.0065349916321597494
+    },
+    {
+      "id": 21,
+      "title": "Blade II",
+      "year": 2002,
+      "traktId": 23244,
+      "depth": 1,
+      "movieKey": "Blade II_2002",
+      "x": 2352.478419889794,
+      "y": 356.6769164590543,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 21,
+      "vy": 0.0003328914797293507,
+      "vx": 0.006596827757544918
+    },
+    {
+      "id": 22,
+      "title": "Lara Croft: Tomb Raider",
+      "year": 2001,
+      "traktId": 1356,
+      "depth": 1,
+      "movieKey": "Lara Croft: Tomb Raider_2001",
+      "x": 2283.881067196689,
+      "y": 370.61977138541954,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 22,
+      "vy": 0.00034044396221142036,
+      "vx": 0.006598362847905016
+    },
+    {
+      "id": 23,
+      "title": "The Transporter",
+      "year": 2002,
+      "traktId": 2427,
+      "depth": 1,
+      "movieKey": "The Transporter_2002",
+      "x": 2297.63178739563,
+      "y": 76.56124311525674,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 23,
+      "vy": 0.0002928295502380767,
+      "vx": 0.006883398961498518
+    },
+    {
+      "id": 24,
+      "title": "Gone in Sixty Seconds",
+      "year": 2000,
+      "traktId": 4951,
+      "depth": 1,
+      "movieKey": "Gone in Sixty Seconds_2000",
+      "x": 2130.904354737851,
+      "y": 23.467025257412878,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 24,
+      "vy": -0.00018264823021033811,
+      "vx": 0.00651108954689547,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 25,
+      "title": "The Italian Job",
+      "year": 2003,
+      "traktId": 4929,
+      "depth": 2,
+      "movieKey": "The Italian Job_2003",
+      "x": 1969.266566895742,
+      "y": 45.295713107930894,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 25,
+      "vy": -0.0018987287933161707,
+      "vx": 0.00605432331634755
+    },
+    {
+      "id": 26,
+      "title": "Fast & Furious",
+      "year": 2009,
+      "traktId": 8202,
+      "depth": 2,
+      "movieKey": "Fast & Furious_2009",
+      "x": 1809.7554190512258,
+      "y": 101.61963175406889,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 26,
+      "vy": -0.002887411223077787,
+      "vx": 0.005128292203907531,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 27,
+      "title": "Ocean's Eleven",
+      "year": 2001,
+      "traktId": 126,
+      "depth": 2,
+      "movieKey": "Ocean's Eleven_2001",
+      "x": 2159.2197242492553,
+      "y": -120.55779273714188,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 27,
+      "vy": -0.0003196538458674637,
+      "vx": 0.007492167628492849
+    },
+    {
+      "id": 28,
+      "title": "Gone in 60 Seconds",
+      "year": 1974,
+      "traktId": 9986,
+      "depth": 2,
+      "movieKey": "Gone in 60 Seconds_1974",
+      "x": 2263.603837446832,
+      "y": -35.91783041445566,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 28,
+      "vy": 0.0004798562457559242,
+      "vx": 0.007030808062325623
+    },
+    {
+      "id": 29,
+      "title": "Drive",
+      "year": 2011,
+      "traktId": 46736,
+      "depth": 2,
+      "movieKey": "Drive_2011",
+      "x": 2223.7644445578567,
+      "y": -93.4749565942849,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 29,
+      "vy": 0.00026926536517347856,
+      "vx": 0.007335053003594434
+    },
+    {
+      "id": 30,
+      "title": "The Town",
+      "year": 2010,
+      "traktId": 14027,
+      "depth": 2,
+      "movieKey": "The Town_2010",
+      "x": 2089.8739067847287,
+      "y": -111.0308292947621,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 30,
+      "vy": -0.0005903895878387593,
+      "vx": 0.007388753001847212
+    },
+    {
+      "id": 31,
+      "title": "Ronin",
+      "year": 1998,
+      "traktId": 4065,
+      "depth": 2,
+      "movieKey": "Ronin_1998",
+      "x": 2231.0021341705155,
+      "y": 98.02025778307286,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 31,
+      "vy": -0.00038839097308749113,
+      "vx": 0.006663998283823849
+    },
+    {
+      "id": 32,
+      "title": "2 Fast 2 Furious",
+      "year": 2003,
+      "traktId": 463,
+      "depth": 3,
+      "movieKey": "2 Fast 2 Furious_2003",
+      "x": 1860.6547491570616,
+      "y": 226.83539432455945,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 32,
+      "vy": -0.00285216770438553,
+      "vx": 0.0051455154229884436
+    },
+    {
+      "id": 33,
+      "title": "The Fast and the Furious: Tokyo Drift",
+      "year": 2006,
+      "traktId": 4891,
+      "depth": 3,
+      "movieKey": "The Fast and the Furious: Tokyo Drift_2006",
+      "x": 1719.8148042774703,
+      "y": 9.171228621017086,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 33,
+      "vy": -0.004049503534290257,
+      "vx": 0.005686610272520144
+    },
+    {
+      "id": 34,
+      "title": "Fast Five",
+      "year": 2011,
+      "traktId": 36131,
+      "depth": 3,
+      "movieKey": "Fast Five_2011",
+      "x": 1772.6844290775678,
+      "y": 230.76586203983376,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 34,
+      "vy": -0.0029138629197691707,
+      "vx": 0.0043884705677292146
+    },
+    {
+      "id": 35,
+      "title": "Death Race",
+      "year": 2008,
+      "traktId": 5666,
+      "depth": 3,
+      "movieKey": "Death Race_2008",
+      "x": 1231.9653685719095,
+      "y": 73.4624504473025,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 35,
+      "vy": -0.005134465899086455,
+      "vx": 0.0010246520281166824,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 36,
+      "title": "Need for Speed",
+      "year": 2014,
+      "traktId": 92062,
+      "depth": 3,
+      "movieKey": "Need for Speed_2014",
+      "x": 1814.7308569924926,
+      "y": -32.760483636308756,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 36,
+      "vy": -0.0029402120994387907,
+      "vx": 0.006709570996959132
+    },
+    {
+      "id": 37,
+      "title": "Mad Max: Fury Road",
+      "year": 2015,
+      "traktId": 56360,
+      "depth": 4,
+      "movieKey": "Mad Max: Fury Road_2015",
+      "x": 558.3493261390654,
+      "y": 80.49287076948201,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 37,
+      "vy": -0.0028160613530763385,
+      "vx": -0.0033498862453448554,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 38,
+      "title": "The Running Man",
+      "year": 1987,
+      "traktId": 708,
+      "depth": 4,
+      "movieKey": "The Running Man_1987",
+      "x": 1210.7945739343938,
+      "y": -60.90799883290292,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 38,
+      "vy": -0.005456243643777753,
+      "vx": 0.001872910959584236
+    },
+    {
+      "id": 39,
+      "title": "Gamer",
+      "year": 2009,
+      "traktId": 11334,
+      "depth": 4,
+      "movieKey": "Gamer_2009",
+      "x": 1270.3815417508988,
+      "y": 206.26064680950944,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 39,
+      "vy": -0.005904937185080503,
+      "vx": 0.002829833125832341
+    },
+    {
+      "id": 40,
+      "title": "Rollerball",
+      "year": 1975,
+      "traktId": 6570,
+      "depth": 4,
+      "movieKey": "Rollerball_1975",
+      "x": 1110.0244467932393,
+      "y": 105.28561226947109,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 40,
+      "vy": -0.0068079231761434735,
+      "vx": 0.0008001442454254008
+    },
+    {
+      "id": 41,
+      "title": "The Hunger Games",
+      "year": 2012,
+      "traktId": 51342,
+      "depth": 4,
+      "movieKey": "The Hunger Games_2012",
+      "x": 1305.8714553715113,
+      "y": -41.80460965711078,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 41,
+      "vy": -0.005412332957824802,
+      "vx": 0.0011088430862927214
+    },
+    {
+      "id": 42,
+      "title": "Escape from New York",
+      "year": 1981,
+      "traktId": 846,
+      "depth": 4,
+      "movieKey": "Escape from New York_1981",
+      "x": 1334.4884016170654,
+      "y": 163.89925447035557,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 42,
+      "vy": -0.007591897604800641,
+      "vx": 0.0028917335415340278
+    },
+    {
+      "id": 43,
+      "title": "Battle Royale",
+      "year": 2000,
+      "traktId": 2134,
+      "depth": 4,
+      "movieKey": "Battle Royale_2000",
+      "x": 1365.8622314565598,
+      "y": 68.89227401246421,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 43,
+      "vy": -0.009027701936907407,
+      "vx": 0.0009584610915828092
+    },
+    {
+      "id": 44,
+      "title": "Fortress",
+      "year": 1992,
+      "traktId": 7007,
+      "depth": 4,
+      "movieKey": "Fortress_1992",
+      "x": 1192.1891705956607,
+      "y": 202.08057806747803,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 44,
+      "vy": -0.005169616157631872,
+      "vx": 0.0018563343790345532
+    },
+    {
+      "id": 45,
+      "title": "Dredd",
+      "year": 2012,
+      "traktId": 34095,
+      "depth": 5,
+      "movieKey": "Dredd_2012",
+      "x": 684.1748449637164,
+      "y": 129.71099164386345,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 45,
+      "vy": -0.005272851001915796,
+      "vx": -0.0032112002561621575
+    },
+    {
+      "id": 46,
+      "title": "Snowpiercer",
+      "year": 2013,
+      "traktId": 77887,
+      "depth": 5,
+      "movieKey": "Snowpiercer_2013",
+      "x": 652.4123972015623,
+      "y": -26.051057435445426,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 46,
+      "vy": -0.0033789556256527955,
+      "vx": -0.004708306797718802
+    },
+    {
+      "id": 47,
+      "title": "The Road",
+      "year": 2009,
+      "traktId": 12752,
+      "depth": 5,
+      "movieKey": "The Road_2009",
+      "x": 690.0700972255863,
+      "y": 39.61584211036878,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 47,
+      "vy": -0.0051173327006248,
+      "vx": -0.004800400691221978
+    },
+    {
+      "id": 48,
+      "title": "Blade Runner 2049",
+      "year": 2017,
+      "traktId": 216716,
+      "depth": 5,
+      "movieKey": "Blade Runner 2049_2017",
+      "x": -141.69583472792291,
+      "y": 257.5877153766444,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 48,
+      "vy": -0.0014636223913478644,
+      "vx": -0.004720830614313757,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 49,
+      "title": "Fury",
+      "year": 2014,
+      "traktId": 139432,
+      "depth": 5,
+      "movieKey": "Fury_2014",
+      "x": 615.5436062152237,
+      "y": 197.8344040510888,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 49,
+      "vy": -0.0032504055641133524,
+      "vx": -0.002850599515515035
+    },
+    {
+      "id": 50,
+      "title": "The Book of Eli",
+      "year": 2010,
+      "traktId": 12589,
+      "depth": 5,
+      "movieKey": "The Book of Eli_2010",
+      "x": 461.79742742338044,
+      "y": -17.245380555149165,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 50,
+      "vy": -0.0022521830346886804,
+      "vx": -0.004117213509627244
+    },
+    {
+      "id": 51,
+      "title": "Edge of Tomorrow",
+      "year": 2014,
+      "traktId": 92230,
+      "depth": 5,
+      "movieKey": "Edge of Tomorrow_2014",
+      "x": 521.2471546089863,
+      "y": -57.342742969736136,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 51,
+      "vy": -0.002591220975561887,
+      "vx": -0.004670737915897302
+    },
+    {
+      "id": 52,
+      "title": "Oblivion",
+      "year": 2013,
+      "traktId": 55753,
+      "depth": 5,
+      "movieKey": "Oblivion_2013",
+      "x": 591.1967256643806,
+      "y": -59.99934010427925,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 52,
+      "vy": -0.0034417473044151166,
+      "vx": -0.004703034382250576
+    },
+    {
+      "id": 53,
+      "title": "Ex Machina",
+      "year": 2015,
+      "traktId": 163375,
+      "depth": 6,
+      "movieKey": "Ex Machina_2015",
+      "x": -3.441735281598358,
+      "y": 284.124373272276,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 53,
+      "vy": 0.0029524261702255725,
+      "vx": -0.004980695151331583
+    },
+    {
+      "id": 54,
+      "title": "Arrival",
+      "year": 2016,
+      "traktId": 210803,
+      "depth": 6,
+      "movieKey": "Arrival_2016",
+      "x": -213.24447376029002,
+      "y": 135.18725317428476,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 54,
+      "vy": -0.0010367241537654428,
+      "vx": -0.005702751556963785
+    },
+    {
+      "id": 55,
+      "title": "Inception",
+      "year": 2010,
+      "traktId": 16662,
+      "depth": 6,
+      "movieKey": "Inception_2010",
+      "x": -325.64917059204595,
+      "y": 317.0055619550409,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 55,
+      "vy": -0.0027344193547572163,
+      "vx": -0.006921282331441265
+    },
+    {
+      "id": 56,
+      "title": "Her",
+      "year": 2013,
+      "traktId": 99919,
+      "depth": 6,
+      "movieKey": "Her_2013",
+      "x": 73.93043151931676,
+      "y": 425.06693304000197,
+      "isNew": false,
+      "fullDetails": {
+        "title": "Her",
+        "year": 2013,
+        "ids": {
+          "trakt": 99919,
+          "slug": "her-2013",
+          "imdb": "tt1798709",
+          "tmdb": 152601
+        },
+        "tagline": "A Spike Jonze love story.",
+        "overview": "In the not so distant future, Theodore, a lonely writer, purchases a newly developed operating system designed to meet the user's every need. To Theodore's surprise, a romantic relationship develops between him and his operating system. This unconventional love story blends science fiction and romance in a sweet tale that explores the nature of love and the ways that technology isolates and connects us all.",
+        "released": "2013-12-18",
+        "runtime": 126,
+        "country": "us",
+        "trailer": "https://youtube.com/watch?v=ne6p6MfLBxc",
+        "homepage": "http://www.warnerbros.com/movies/her",
+        "status": "released",
+        "rating": 7.91986,
+        "votes": 25993,
+        "comment_count": 158,
+        "updated_at": "2025-07-20T08:29:11.000Z",
+        "language": "en",
+        "languages": [
+          "en"
+        ],
+        "available_translations": [
+          "ar",
+          "bg",
+          "ca",
+          "cs",
+          "da",
+          "de",
+          "el",
+          "en",
+          "es",
+          "et",
+          "fa",
+          "fi",
+          "fr",
+          "he",
+          "hr",
+          "hu",
+          "id",
+          "it",
+          "ja",
+          "ka",
+          "kk",
+          "ko",
+          "lt",
+          "lv",
+          "ms",
+          "nb",
+          "nl",
+          "nn",
+          "no",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "sk",
+          "sl",
+          "sr",
+          "sv",
+          "th",
+          "tr",
+          "uk",
+          "vi",
+          "zh"
+        ],
+        "genres": [
+          "drama",
+          "science-fiction",
+          "romance"
+        ],
+        "subgenres": [
+          "satire"
+        ],
+        "certification": "R",
+        "original_title": "Her",
+        "after_credits": false,
+        "during_credits": false,
+        "stats": {
+          "watchers": 70156,
+          "plays": 77304,
+          "collectors": 317555,
+          "comments": 158,
+          "lists": 45153,
+          "votes": 25991,
+          "favorited": 758,
+          "recommended": 758
+        },
+        "ratings": {
+          "rating": 7.91986,
+          "votes": 25991,
+          "distribution": {
+            "1": 242,
+            "2": 143,
+            "3": 196,
+            "4": 343,
+            "5": 738,
+            "6": 1944,
+            "7": 4766,
+            "8": 8044,
+            "9": 5440,
+            "10": 4129
+          }
+        }
+      },
+      "basicDetails": {},
+      "index": 56,
+      "vy": 0.0029949444497221465,
+      "vx": -0.0033080137960836854,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 57,
+      "title": "A.I. Artificial Intelligence",
+      "year": 2001,
+      "traktId": 520,
+      "depth": 6,
+      "movieKey": "A.I. Artificial Intelligence_2001",
+      "x": -66.90954158405201,
+      "y": 374.9833755137374,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 57,
+      "vy": -0.002037823445037243,
+      "vx": -0.002785890820484009
+    },
+    {
+      "id": 58,
+      "title": "Ghost in the Shell",
+      "year": 1995,
+      "traktId": 4621,
+      "depth": 6,
+      "movieKey": "Ghost in the Shell_1995",
+      "x": -135.4521440539511,
+      "y": 115.7817252447282,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 58,
+      "vy": -0.0017271520056210705,
+      "vx": -0.005197148829314002
+    },
+    {
+      "id": 59,
+      "title": "Total Recall",
+      "year": 1990,
+      "traktId": 704,
+      "depth": 3,
+      "movieKey": "Total Recall_1990",
+      "x": -441.75279547565935,
+      "y": 544.6348554773931,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 59,
+      "vy": -0.0038036533589951367,
+      "vx": -0.011886390595338886
+    },
+    {
+      "id": 60,
+      "title": "A Scanner Darkly",
+      "year": 2006,
+      "traktId": 2232,
+      "depth": 3,
+      "movieKey": "A Scanner Darkly_2006",
+      "x": -575.7847786912339,
+      "y": 303.47919352169845,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 60,
+      "vy": -0.004539294424247333,
+      "vx": -0.009577605243924052
+    },
+    {
+      "id": 61,
+      "title": "Gattaca",
+      "year": 1997,
+      "traktId": 625,
+      "depth": 3,
+      "movieKey": "Gattaca_1997",
+      "x": -380.79534986926257,
+      "y": 481.89484341250153,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 61,
+      "vy": -0.0017256118958483384,
+      "vx": -0.011550270072121173
+    },
+    {
+      "id": 62,
+      "title": "Looper",
+      "year": 2012,
+      "traktId": 42897,
+      "depth": 3,
+      "movieKey": "Looper_2012",
+      "x": -513.5216529915124,
+      "y": 553.3937047777584,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 62,
+      "vy": -0.004929635816466006,
+      "vx": -0.011819744132256354
+    },
+    {
+      "id": 63,
+      "title": "Eternal Sunshine of the Spotless Mind",
+      "year": 2004,
+      "traktId": 29,
+      "depth": 7,
+      "movieKey": "Eternal Sunshine of the Spotless Mind_2004",
+      "x": 199.76578055106248,
+      "y": 524.3631011930056,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 63,
+      "vy": 0.008680374227157365,
+      "vx": -0.005521376133421366
+    },
+    {
+      "id": 64,
+      "title": "Lost in Translation",
+      "year": 2003,
+      "traktId": 118,
+      "depth": 7,
+      "movieKey": "Lost in Translation_2003",
+      "x": 299.8847073011519,
+      "y": 641.0219693051399,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 64,
+      "vy": 0.009596554331420471,
+      "vx": -0.0068119516180170795,
+      "fx": null,
+      "fy": null,
+      "expanding": false
+    },
+    {
+      "id": 65,
+      "title": "The Lobster",
+      "year": 2015,
+      "traktId": 154718,
+      "depth": 7,
+      "movieKey": "The Lobster_2015",
+      "x": 119.99551517801906,
+      "y": 297.1203301896977,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 65,
+      "vy": 0.0034672179866074744,
+      "vx": -0.0023713448602559165
+    },
+    {
+      "id": 66,
+      "title": "Adaptation.",
+      "year": 2002,
+      "traktId": 1841,
+      "depth": 7,
+      "movieKey": "Adaptation._2002",
+      "x": 15.873586940638022,
+      "y": 548.0435162102143,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 66,
+      "vy": 0.0004991670959039984,
+      "vx": -0.008088855704763417
+    },
+    {
+      "id": 67,
+      "title": "Upstream Color",
+      "year": 2013,
+      "traktId": 96283,
+      "depth": 7,
+      "movieKey": "Upstream Color_2013",
+      "x": 97.65814717165571,
+      "y": 556.2230636958936,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 67,
+      "vy": 0.003548498966264225,
+      "vx": -0.007863356921156767
+    },
+    {
+      "id": 68,
+      "title": "Before Sunset",
+      "year": 2004,
+      "traktId": 50,
+      "depth": 8,
+      "movieKey": "Before Sunset_2004",
+      "x": 332.6877243972477,
+      "y": 513.5933049290414,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 68,
+      "vy": 0.011424396517144003,
+      "vx": -0.0005201828457736424
+    },
+    {
+      "id": 69,
+      "title": "Sideways",
+      "year": 2004,
+      "traktId": 4947,
+      "depth": 8,
+      "movieKey": "Sideways_2004",
+      "x": 402.6599201757757,
+      "y": 549.6626063009641,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 69,
+      "vy": 0.01563829276835137,
+      "vx": -0.0011325515802017877
+    },
+    {
+      "id": 70,
+      "title": "Annie Hall",
+      "year": 1977,
+      "traktId": 575,
+      "depth": 8,
+      "movieKey": "Annie Hall_1977",
+      "x": 341.4411069079475,
+      "y": 777.8221480004388,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 70,
+      "vy": 0.011856052010669237,
+      "vx": -0.01276846827571941
+    },
+    {
+      "id": 71,
+      "title": "Broken Flowers",
+      "year": 2005,
+      "traktId": 259,
+      "depth": 8,
+      "movieKey": "Broken Flowers_2005",
+      "x": 437.97062194629996,
+      "y": 610.510224420906,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 71,
+      "vy": 0.01693058841905099,
+      "vx": -0.004598838902994902
+    },
+    {
+      "id": 72,
+      "title": "The Royal Tenenbaums",
+      "year": 2001,
+      "traktId": 4717,
+      "depth": 8,
+      "movieKey": "The Royal Tenenbaums_2001",
+      "x": 438.97426552703917,
+      "y": 680.5021011135142,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 72,
+      "vy": 0.01700504893970731,
+      "vx": -0.008285861512884242
+    },
+    {
+      "id": 73,
+      "title": "Garden State",
+      "year": 2004,
+      "traktId": 319,
+      "depth": 8,
+      "movieKey": "Garden State_2004",
+      "x": 404.8857687424493,
+      "y": 741.641076976603,
+      "isNew": false,
+      "fullDetails": null,
+      "basicDetails": {},
+      "index": 73,
+      "vy": 0.015109757478790654,
+      "vx": -0.011685370876634566
+    }
+  ],
+  "links": [
+    {
+      "source": 0,
+      "target": 1
+    },
+    {
+      "source": 0,
+      "target": 2
+    },
+    {
+      "source": 0,
+      "target": 3
+    },
+    {
+      "source": 0,
+      "target": 4
+    },
+    {
+      "source": 0,
+      "target": 5
+    },
+    {
+      "source": 0,
+      "target": 6
+    },
+    {
+      "source": 0,
+      "target": 7
+    },
+    {
+      "source": 0,
+      "target": 8
+    },
+    {
+      "source": 6,
+      "target": 9
+    },
+    {
+      "source": 6,
+      "target": 10
+    },
+    {
+      "source": 6,
+      "target": 8
+    },
+    {
+      "source": 6,
+      "target": 11
+    },
+    {
+      "source": 6,
+      "target": 12
+    },
+    {
+      "source": 6,
+      "target": 13
+    },
+    {
+      "source": 6,
+      "target": 14
+    },
+    {
+      "source": 6,
+      "target": 15
+    },
+    {
+      "source": 16,
+      "target": 17
+    },
+    {
+      "source": 16,
+      "target": 18
+    },
+    {
+      "source": 16,
+      "target": 19
+    },
+    {
+      "source": 16,
+      "target": 20
+    },
+    {
+      "source": 16,
+      "target": 21
+    },
+    {
+      "source": 16,
+      "target": 22
+    },
+    {
+      "source": 16,
+      "target": 23
+    },
+    {
+      "source": 16,
+      "target": 24
+    },
+    {
+      "source": 24,
+      "target": 25
+    },
+    {
+      "source": 24,
+      "target": 26
+    },
+    {
+      "source": 24,
+      "target": 27
+    },
+    {
+      "source": 24,
+      "target": 23
+    },
+    {
+      "source": 24,
+      "target": 28
+    },
+    {
+      "source": 24,
+      "target": 29
+    },
+    {
+      "source": 24,
+      "target": 30
+    },
+    {
+      "source": 24,
+      "target": 31
+    },
+    {
+      "source": 26,
+      "target": 17
+    },
+    {
+      "source": 26,
+      "target": 32
+    },
+    {
+      "source": 26,
+      "target": 33
+    },
+    {
+      "source": 26,
+      "target": 34
+    },
+    {
+      "source": 26,
+      "target": 35
+    },
+    {
+      "source": 26,
+      "target": 36
+    },
+    {
+      "source": 26,
+      "target": 25
+    },
+    {
+      "source": 35,
+      "target": 37
+    },
+    {
+      "source": 35,
+      "target": 38
+    },
+    {
+      "source": 35,
+      "target": 39
+    },
+    {
+      "source": 35,
+      "target": 40
+    },
+    {
+      "source": 35,
+      "target": 41
+    },
+    {
+      "source": 35,
+      "target": 42
+    },
+    {
+      "source": 35,
+      "target": 43
+    },
+    {
+      "source": 35,
+      "target": 44
+    },
+    {
+      "source": 37,
+      "target": 45
+    },
+    {
+      "source": 37,
+      "target": 46
+    },
+    {
+      "source": 37,
+      "target": 47
+    },
+    {
+      "source": 37,
+      "target": 48
+    },
+    {
+      "source": 37,
+      "target": 49
+    },
+    {
+      "source": 37,
+      "target": 50
+    },
+    {
+      "source": 37,
+      "target": 51
+    },
+    {
+      "source": 37,
+      "target": 52
+    },
+    {
+      "source": 48,
+      "target": 53
+    },
+    {
+      "source": 48,
+      "target": 54
+    },
+    {
+      "source": 48,
+      "target": 14
+    },
+    {
+      "source": 48,
+      "target": 55
+    },
+    {
+      "source": 48,
+      "target": 56
+    },
+    {
+      "source": 48,
+      "target": 15
+    },
+    {
+      "source": 48,
+      "target": 57
+    },
+    {
+      "source": 48,
+      "target": 58
+    },
+    {
+      "source": 15,
+      "target": 14
+    },
+    {
+      "source": 15,
+      "target": 59
+    },
+    {
+      "source": 15,
+      "target": 60
+    },
+    {
+      "source": 15,
+      "target": 55
+    },
+    {
+      "source": 15,
+      "target": 13
+    },
+    {
+      "source": 15,
+      "target": 61
+    },
+    {
+      "source": 15,
+      "target": 62
+    },
+    {
+      "source": 15,
+      "target": 9
+    },
+    {
+      "source": 56,
+      "target": 53
+    },
+    {
+      "source": 56,
+      "target": 63
+    },
+    {
+      "source": 56,
+      "target": 57
+    },
+    {
+      "source": 56,
+      "target": 64
+    },
+    {
+      "source": 56,
+      "target": 65
+    },
+    {
+      "source": 56,
+      "target": 66
+    },
+    {
+      "source": 56,
+      "target": 67
+    },
+    {
+      "source": 64,
+      "target": 68
+    },
+    {
+      "source": 64,
+      "target": 69
+    },
+    {
+      "source": 64,
+      "target": 63
+    },
+    {
+      "source": 64,
+      "target": 70
+    },
+    {
+      "source": 64,
+      "target": 71
+    },
+    {
+      "source": 64,
+      "target": 72
+    },
+    {
+      "source": 64,
+      "target": 73
+    }
+  ],
+  "settings": {
+    "showLabels": true,
+    "colorScheme": "default"
+  }
+}
