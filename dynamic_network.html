@@ -219,27 +219,83 @@
         .movie-item {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
             border: 1px solid transparent;
+            position: relative;
         }
 
         .movie-item:hover {
             background: rgba(255, 255, 255, 0.1);
             border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .movie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
         }
 
         .movie-title {
             font-weight: bold;
             color: var(--text-color);
             font-size: 13px;
+            flex: 1;
+            margin-right: 8px;
+        }
+
+        .movie-rating {
+            color: var(--gemini-accent);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .movie-meta {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-bottom: 4px;
         }
 
         .movie-year {
             color: var(--text-secondary);
             font-size: 11px;
+        }
+
+        .movie-runtime, .movie-watchers {
+            color: var(--text-secondary);
+        }
+
+        .movie-genres {
+            color: #10b981;
+            font-size: 10px;
+            margin-bottom: 4px;
+            font-style: italic;
+        }
+
+        .movie-depth {
+            color: var(--text-secondary);
+            font-size: 9px;
+            margin-bottom: 6px;
+        }
+
+        .load-details {
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            text-align: center;
+            margin-top: 6px;
+            transition: transform 0.2s;
+        }
+
+        .load-details:hover {
+            transform: scale(1.05);
         }
 
         .loading {
@@ -499,11 +555,29 @@
                 }
             }
 
-            addMovieToNetwork(movie, depth = 0, isNew = true) {
+            async getFullMovieDetails(movieId) {
+                try {
+                    const response = await fetch(`${this.apiBase}/movies/${movieId}/full`);
+                    if (!response.ok) throw new Error('Failed to get movie details');
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Movie details error:', error);
+                    return null;
+                }
+            }
+
+            addMovieToNetwork(movie, depth = 0, isNew = true, fullDetails = null) {
                 const movieKey = `${movie.title}_${movie.year}`;
                 
                 if (this.nodeMap.has(movieKey)) {
-                    return this.nodeMap.get(movieKey);
+                    const existingNode = this.nodeMap.get(movieKey);
+                    // Update with full details if provided
+                    if (fullDetails) {
+                        existingNode.fullDetails = fullDetails;
+                        this.updateSidebar();
+                    }
+                    return existingNode;
                 }
 
                 const node = {
@@ -515,7 +589,18 @@
                     movieKey: movieKey,
                     x: this.width / 2 + (Math.random() - 0.5) * 200,
                     y: this.height / 2 + (Math.random() - 0.5) * 200,
-                    isNew: isNew
+                    isNew: isNew,
+                    fullDetails: fullDetails || null,
+                    // Store basic details from movie object
+                    basicDetails: {
+                        overview: movie.overview,
+                        rating: movie.rating,
+                        votes: movie.votes,
+                        genres: movie.genres,
+                        runtime: movie.runtime,
+                        certification: movie.certification,
+                        trailer: movie.trailer
+                    }
                 };
 
                 this.nodes.push(node);
@@ -680,11 +765,26 @@
                 tooltip.style.display = 'block';
                 tooltip.style.left = (event.pageX + 10) + 'px';
                 tooltip.style.top = (event.pageY - 10) + 'px';
+                
+                const details = d.fullDetails || d.basicDetails || {};
+                const rating = details.rating ? `⭐ ${details.rating.toFixed(1)}` : '';
+                const votes = details.votes ? `(${details.votes.toLocaleString()} votes)` : '';
+                const runtime = details.runtime ? `⏱️ ${details.runtime}min` : '';
+                const certification = details.certification ? `🎬 ${details.certification}` : '';
+                const genres = details.genres ? `🎭 ${details.genres.slice(0, 3).join(', ')}` : '';
+                const watchers = details.stats?.watchers ? `👥 ${details.stats.watchers.toLocaleString()} watchers` : '';
+                
                 tooltip.innerHTML = `
-                    <strong>${d.title} (${d.year})</strong><br>
-                    Depth: ${d.depth}<br>
-                    Trakt ID: ${d.traktId}<br>
-                    Click to expand network
+                    <div style="font-weight: bold; margin-bottom: 8px; color: #f6e05e;">
+                        ${d.title} (${d.year})
+                    </div>
+                    ${rating ? `<div style="margin-bottom: 4px;">${rating} ${votes}</div>` : ''}
+                    ${runtime || certification ? `<div style="margin-bottom: 4px;">${runtime} ${certification}</div>` : ''}
+                    ${genres ? `<div style="margin-bottom: 4px;">${genres}</div>` : ''}
+                    ${watchers ? `<div style="margin-bottom: 4px;">${watchers}</div>` : ''}
+                    <div style="margin-top: 8px; font-size: 11px; color: #b0b0b0;">
+                        Depth: ${d.depth} • Click to expand
+                    </div>
                 `;
             }
 
@@ -706,15 +806,37 @@
 
                 const sortedNodes = [...this.nodes].sort((a, b) => {
                     if (a.depth !== b.depth) return a.depth - b.depth;
+                    // Sort by rating if available, then by title
+                    const aRating = (a.fullDetails?.rating || a.basicDetails?.rating || 0);
+                    const bRating = (b.fullDetails?.rating || b.basicDetails?.rating || 0);
+                    if (aRating !== bRating) return bRating - aRating;
                     return a.title.localeCompare(b.title);
                 });
 
-                movieList.innerHTML = sortedNodes.map(node => `
-                    <div class="movie-item" onclick="network.focusOnNode(${node.id})">
-                        <div class="movie-title">${node.title}</div>
-                        <div class="movie-year">${node.year} • Depth: ${node.depth}</div>
-                    </div>
-                `).join('');
+                movieList.innerHTML = sortedNodes.map(node => {
+                    const details = node.fullDetails || node.basicDetails || {};
+                    const rating = details.rating ? `⭐ ${details.rating.toFixed(1)}` : '';
+                    const genres = details.genres ? details.genres.slice(0, 2).join(', ') : '';
+                    const runtime = details.runtime ? `${details.runtime}min` : '';
+                    const watchers = details.stats?.watchers ? `${(details.stats.watchers / 1000).toFixed(0)}K` : '';
+                    
+                    return `
+                        <div class="movie-item" onclick="network.focusOnNode(${node.id})" onmouseover="network.showMoviePreview(${node.id})" onmouseout="network.hideMoviePreview()">
+                            <div class="movie-header">
+                                <div class="movie-title">${node.title}</div>
+                                <div class="movie-rating">${rating}</div>
+                            </div>
+                            <div class="movie-meta">
+                                <span class="movie-year">${node.year}</span>
+                                ${runtime ? `<span class="movie-runtime">• ${runtime}</span>` : ''}
+                                ${watchers ? `<span class="movie-watchers">• ${watchers} watchers</span>` : ''}
+                            </div>
+                            ${genres ? `<div class="movie-genres">${genres}</div>` : ''}
+                            <div class="movie-depth">Depth: ${node.depth}</div>
+                            ${!node.fullDetails ? '<div class="load-details" onclick="event.stopPropagation(); network.loadMovieDetails(' + node.id + ')">📄 Load Details</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
             }
 
             updateStats() {
@@ -747,7 +869,9 @@
                     const movie = await this.searchMovie(query);
                     
                     if (movie) {
-                        const node = this.addMovieToNetwork(movie, 0, true);
+                        // Get full details for the searched movie
+                        const fullDetails = await this.getFullMovieDetails(movie.ids.trakt);
+                        const node = this.addMovieToNetwork(movie, 0, true, fullDetails);
                         this.showNotification(`Added "${movie.title}" to network!`, 'success');
                         searchInput.value = '';
                         
@@ -801,6 +925,49 @@
                 setTimeout(() => {
                     notification.classList.remove('show');
                 }, 3000);
+            }
+
+            async loadMovieDetails(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node || node.fullDetails) return;
+
+                this.showLoading(true);
+                
+                try {
+                    const fullDetails = await this.getFullMovieDetails(node.traktId);
+                    if (fullDetails) {
+                        node.fullDetails = fullDetails;
+                        this.updateSidebar();
+                        this.showNotification(`Loaded details for ${node.title}`, 'success');
+                    }
+                } catch (error) {
+                    this.showNotification('Failed to load movie details', 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            showMoviePreview(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                // Highlight the node in the network
+                this.nodeContainer.selectAll('circle')
+                    .style('opacity', d => d.id === nodeId ? 1 : 0.3)
+                    .style('stroke-width', d => d.id === nodeId ? 4 : 2);
+
+                this.labelContainer.selectAll('text')
+                    .style('opacity', d => d.id === nodeId ? 1 : 0.3);
+            }
+
+            hideMoviePreview() {
+                // Reset all nodes to normal opacity
+                this.nodeContainer.selectAll('circle')
+                    .style('opacity', 1)
+                    .style('stroke-width', 2);
+
+                this.labelContainer.selectAll('text')
+                    .style('opacity', 1);
             }
         }
 
