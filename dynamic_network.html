@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Movie Network Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1a1a2e;
+            --secondary-color: #16213e;
+            --accent-color: #e94560;
+            --gemini-accent: #f6e05e;
+            --text-color: #ffffff;
+            --text-secondary: #b0b0b0;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        .search-btn, .control-btn {
+            background: linear-gradient(45deg, var(--accent-color), var(--gemini-accent));
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+            font-size: 12px;
+        }
+
+        .search-btn:hover, .control-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .network-container {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #network-svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #network-svg:active {
+            cursor: grabbing;
+        }
+
+        .node {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover {
+            stroke-width: 3px;
+            filter: brightness(1.2);
+        }
+
+        .node.expanding {
+            stroke: var(--gemini-accent);
+            stroke-width: 4px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .link.new {
+            stroke: var(--gemini-accent);
+            stroke-width: 2px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; stroke-width: 4px; }
+            to { opacity: 1; stroke-width: 2px; }
+        }
+
+        .node-label {
+            font-size: 11px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-weight: 500;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            pointer-events: none;
+            font-size: 13px;
+            border: 1px solid var(--glass-border);
+            max-width: 250px;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            z-index: 999;
+        }
+
+        .sidebar h3 {
+            color: var(--gemini-accent);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .movie-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .movie-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        .movie-title {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 13px;
+        }
+
+        .movie-year {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            z-index: 1002;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            background: var(--success-color);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1003;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: var(--accent-color);
+        }
+
+        .help-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+
+        .help-panel h4 {
+            color: var(--gemini-accent);
+            margin-bottom: 8px;
+        }
+
+        .help-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .help-panel li {
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                padding: 10px;
+            }
+
+            .sidebar {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                top: auto;
+                width: auto;
+                max-height: 200px;
+                border-radius: 15px 15px 0 0;
+            }
+
+            .help-panel {
+                display: none;
+            }
+
+            .network-container {
+                bottom: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 Dynamic Movie Network</h1>
+        <div class="search-container">
+            <input type="text" class="search-input" id="movieSearch" placeholder="Search for a movie to add to network..." />
+            <button class="search-btn" onclick="searchAndAddMovie()">🔍 Add</button>
+        </div>
+        <div class="controls">
+            <div class="stats" id="networkStats">0 movies, 0 connections</div>
+            <button class="control-btn" onclick="clearNetwork()">🗑️ Clear</button>
+            <button class="control-btn" onclick="centerNetwork()">🎯 Center</button>
+            <button class="control-btn" onclick="toggleLabels()">🏷️ Labels</button>
+        </div>
+    </div>
+
+    <div class="network-container">
+        <svg id="network-svg"></svg>
+    </div>
+
+    <div class="sidebar">
+        <h3>🎭 Network Movies</h3>
+        <div id="movieList">
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                Search for a movie to start building your network!
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loadingIndicator">
+        <div class="spinner"></div>
+        <div>Loading related movies...</div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="help-panel">
+        <h4>💡 How to Use</h4>
+        <ul>
+            <li>🔍 Search and add movies</li>
+            <li>🖱️ Click nodes to expand</li>
+            <li>🖱️ Drag nodes to rearrange</li>
+            <li>🖱️ Scroll to zoom</li>
+            <li>🖱️ Hover for details</li>
+        </ul>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script>
+        class DynamicMovieNetwork {
+            constructor() {
+                this.apiBase = 'http://127.0.0.1:5000/api';
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap = new Map();
+                this.showLabels = true;
+                this.nextNodeId = 0;
+                
+                this.setupVisualization();
+                this.setupEventListeners();
+            }
+
+            setupVisualization() {
+                const svg = d3.select('#network-svg');
+                const width = window.innerWidth;
+                const height = window.innerHeight - 80;
+
+                this.svg = svg;
+                this.width = width;
+                this.height = height;
+
+                // Create main group for zooming/panning
+                this.g = svg.append('g');
+
+                // Setup zoom behavior
+                this.zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on('zoom', (event) => {
+                        this.g.attr('transform', event.transform);
+                    });
+
+                svg.call(this.zoom);
+
+                // Create simulation
+                this.simulation = d3.forceSimulation()
+                    .force('link', d3.forceLink().id(d => d.id).distance(120))
+                    .force('charge', d3.forceManyBody().strength(-400))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(35));
+
+                // Create containers for links and nodes
+                this.linkContainer = this.g.append('g').attr('class', 'links');
+                this.nodeContainer = this.g.append('g').attr('class', 'nodes');
+                this.labelContainer = this.g.append('g').attr('class', 'labels');
+
+                this.colorScale = d3.scaleOrdinal()
+                    .domain([0, 1, 2, 3])
+                    .range(['#e94560', '#f6e05e', '#10b981', '#3b82f6']);
+            }
+
+            setupEventListeners() {
+                // Search on Enter key
+                document.getElementById('movieSearch').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.searchAndAddMovie();
+                    }
+                });
+
+                // Window resize
+                window.addEventListener('resize', () => {
+                    this.handleResize();
+                });
+            }
+
+            handleResize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight - 80;
+                
+                this.width = width;
+                this.height = height;
+                
+                this.svg.attr('width', width).attr('height', height);
+                this.simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                this.simulation.alpha(0.3).restart();
+            }
+
+            async searchMovie(query) {
+                try {
+                    const response = await fetch(`${this.apiBase}/search/movies/fast?query=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error('Search failed');
+                    const data = await response.json();
+                    return data[0]?.movie || null;
+                } catch (error) {
+                    console.error('Search error:', error);
+                    return null;
+                }
+            }
+
+            async getRelatedMovies(movieId) {
+                try {
+                    const response = await fetch(`${this.apiBase}/movies/${movieId}/related/fast`);
+                    if (!response.ok) throw new Error('Failed to get related movies');
+                    const data = await response.json();
+                    return data.slice(0, 8); // Limit to 8 related movies
+                } catch (error) {
+                    console.error('Related movies error:', error);
+                    return [];
+                }
+            }
+
+            addMovieToNetwork(movie, depth = 0, isNew = true) {
+                const movieKey = `${movie.title}_${movie.year}`;
+                
+                if (this.nodeMap.has(movieKey)) {
+                    return this.nodeMap.get(movieKey);
+                }
+
+                const node = {
+                    id: this.nextNodeId++,
+                    title: movie.title,
+                    year: movie.year,
+                    traktId: movie.ids.trakt,
+                    depth: depth,
+                    movieKey: movieKey,
+                    x: this.width / 2 + (Math.random() - 0.5) * 200,
+                    y: this.height / 2 + (Math.random() - 0.5) * 200,
+                    isNew: isNew
+                };
+
+                this.nodes.push(node);
+                this.nodeMap.set(movieKey, node);
+                
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+
+                return node;
+            }
+
+            addConnection(sourceNode, targetNode, isNew = true) {
+                // Check if connection already exists
+                const existingLink = this.links.find(link => 
+                    (link.source.id === sourceNode.id && link.target.id === targetNode.id) ||
+                    (link.source.id === targetNode.id && link.target.id === sourceNode.id)
+                );
+
+                if (existingLink) return existingLink;
+
+                const link = {
+                    source: sourceNode,
+                    target: targetNode,
+                    isNew: isNew
+                };
+
+                this.links.push(link);
+                return link;
+            }
+
+            async expandNode(node) {
+                if (node.expanding) return; // Prevent multiple expansions
+                
+                node.expanding = true;
+                this.showLoading(true);
+                this.showNotification(`Expanding ${node.title}...`);
+
+                try {
+                    const relatedMovies = await this.getRelatedMovies(node.traktId);
+                    
+                    for (const relatedMovie of relatedMovies) {
+                        const relatedNode = this.addMovieToNetwork(relatedMovie, node.depth + 1, true);
+                        this.addConnection(node, relatedNode, true);
+                    }
+
+                    this.showNotification(`Added ${relatedMovies.length} related movies!`, 'success');
+                    
+                } catch (error) {
+                    this.showNotification('Failed to expand network', 'error');
+                } finally {
+                    node.expanding = false;
+                    this.showLoading(false);
+                    this.updateVisualization();
+                }
+            }
+
+            updateVisualization() {
+                // Update simulation data
+                this.simulation.nodes(this.nodes);
+                this.simulation.force('link').links(this.links);
+
+                // Update links
+                const linkSelection = this.linkContainer
+                    .selectAll('line')
+                    .data(this.links, d => `${d.source.id}-${d.target.id}`);
+
+                linkSelection.exit().remove();
+
+                const linkEnter = linkSelection.enter()
+                    .append('line')
+                    .attr('class', d => `link ${d.isNew ? 'new' : ''}`);
+
+                linkEnter.merge(linkSelection)
+                    .attr('class', d => `link ${d.isNew ? 'new' : ''}`);
+
+                // Update nodes
+                const nodeSelection = this.nodeContainer
+                    .selectAll('circle')
+                    .data(this.nodes, d => d.id);
+
+                nodeSelection.exit().remove();
+
+                const nodeEnter = nodeSelection.enter()
+                    .append('circle')
+                    .attr('class', 'node')
+                    .attr('r', d => d.depth === 0 ? 15 : 10)
+                    .attr('fill', d => this.colorScale(Math.min(d.depth, 3)))
+                    .call(this.getDragBehavior())
+                    .on('click', (event, d) => this.expandNode(d))
+                    .on('mouseover', (event, d) => this.showTooltip(event, d))
+                    .on('mouseout', () => this.hideTooltip());
+
+                nodeEnter.merge(nodeSelection)
+                    .attr('class', d => `node ${d.expanding ? 'expanding' : ''}`)
+                    .attr('fill', d => this.colorScale(Math.min(d.depth, 3)));
+
+                // Update labels
+                const labelSelection = this.labelContainer
+                    .selectAll('text')
+                    .data(this.nodes, d => d.id);
+
+                labelSelection.exit().remove();
+
+                const labelEnter = labelSelection.enter()
+                    .append('text')
+                    .attr('class', 'node-label')
+                    .text(d => d.title)
+                    .style('display', this.showLabels ? 'block' : 'none');
+
+                labelEnter.merge(labelSelection)
+                    .text(d => d.title)
+                    .style('display', this.showLabels ? 'block' : 'none');
+
+                // Restart simulation
+                this.simulation.alpha(0.3).restart();
+
+                // Setup tick function
+                this.simulation.on('tick', () => {
+                    this.linkContainer.selectAll('line')
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+
+                    this.nodeContainer.selectAll('circle')
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y);
+
+                    this.labelContainer.selectAll('text')
+                        .attr('x', d => d.x)
+                        .attr('y', d => d.y + 25);
+                });
+
+                // Clear new flags after animation
+                setTimeout(() => {
+                    this.links.forEach(link => link.isNew = false);
+                    this.nodes.forEach(node => node.isNew = false);
+                }, 1000);
+            }
+
+            getDragBehavior() {
+                return d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) this.simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) this.simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    });
+            }
+
+            showTooltip(event, d) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.display = 'block';
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+                tooltip.innerHTML = `
+                    <strong>${d.title} (${d.year})</strong><br>
+                    Depth: ${d.depth}<br>
+                    Trakt ID: ${d.traktId}<br>
+                    Click to expand network
+                `;
+            }
+
+            hideTooltip() {
+                document.getElementById('tooltip').style.display = 'none';
+            }
+
+            updateSidebar() {
+                const movieList = document.getElementById('movieList');
+                
+                if (this.nodes.length === 0) {
+                    movieList.innerHTML = `
+                        <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            Search for a movie to start building your network!
+                        </div>
+                    `;
+                    return;
+                }
+
+                const sortedNodes = [...this.nodes].sort((a, b) => {
+                    if (a.depth !== b.depth) return a.depth - b.depth;
+                    return a.title.localeCompare(b.title);
+                });
+
+                movieList.innerHTML = sortedNodes.map(node => `
+                    <div class="movie-item" onclick="network.focusOnNode(${node.id})">
+                        <div class="movie-title">${node.title}</div>
+                        <div class="movie-year">${node.year} • Depth: ${node.depth}</div>
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                const stats = document.getElementById('networkStats');
+                stats.textContent = `${this.nodes.length} movies, ${this.links.length} connections`;
+            }
+
+            focusOnNode(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                const transform = d3.zoomIdentity
+                    .translate(this.width / 2 - node.x, this.height / 2 - node.y)
+                    .scale(1.5);
+
+                this.svg.transition()
+                    .duration(750)
+                    .call(this.zoom.transform, transform);
+            }
+
+            async searchAndAddMovie() {
+                const searchInput = document.getElementById('movieSearch');
+                const query = searchInput.value.trim();
+                
+                if (!query) return;
+
+                this.showLoading(true);
+                
+                try {
+                    const movie = await this.searchMovie(query);
+                    
+                    if (movie) {
+                        const node = this.addMovieToNetwork(movie, 0, true);
+                        this.showNotification(`Added "${movie.title}" to network!`, 'success');
+                        searchInput.value = '';
+                        
+                        // Focus on the new node
+                        setTimeout(() => this.focusOnNode(node.id), 500);
+                    } else {
+                        this.showNotification('Movie not found', 'error');
+                    }
+                } catch (error) {
+                    this.showNotification('Search failed', 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            clearNetwork() {
+                this.nodes = [];
+                this.links = [];
+                this.nodeMap.clear();
+                this.nextNodeId = 0;
+                
+                this.updateVisualization();
+                this.updateSidebar();
+                this.updateStats();
+                
+                this.showNotification('Network cleared', 'success');
+            }
+
+            centerNetwork() {
+                const transform = d3.zoomIdentity.translate(this.width / 2, this.height / 2).scale(1);
+                this.svg.transition().duration(750).call(this.zoom.transform, transform);
+            }
+
+            toggleLabels() {
+                this.showLabels = !this.showLabels;
+                this.labelContainer.selectAll('text')
+                    .style('display', this.showLabels ? 'block' : 'none');
+            }
+
+            showLoading(show) {
+                const loading = document.getElementById('loadingIndicator');
+                loading.style.display = show ? 'block' : 'none';
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Global functions for button clicks
+        let network;
+
+        function searchAndAddMovie() {
+            network.searchAndAddMovie();
+        }
+
+        function clearNetwork() {
+            network.clearNetwork();
+        }
+
+        function centerNetwork() {
+            network.centerNetwork();
+        }
+
+        function toggleLabels() {
+            network.toggleLabels();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            network = new DynamicMovieNetwork();
+        });
+    </script>
+</body>
+</html>

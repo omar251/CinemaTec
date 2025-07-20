@@ -12,7 +12,8 @@
     "test-gemini": "node scripts/test_gemini_api.js",
     "quick-start": "node scripts/start_node.js",
     "generate-network": "node scripts/movie_network_generator.js",
-    "generate-networks": "node scripts/generate_movie_networks.js"
+    "generate-networks": "node scripts/generate_movie_networks.js",
+    "dynamic-network": "echo 'Open dynamic_network.html in your browser'"
   },
   "keywords": [
     "trakt",
