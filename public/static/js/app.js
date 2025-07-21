@@ -66,6 +66,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clearBtn').addEventListener('click', () => network.clearNetwork());
         document.getElementById('centerBtn').addEventListener('click', () => network.centerNetwork());
         document.getElementById('labelsBtn').addEventListener('click', () => network.toggleLabels());
+        
+        // Color mode selector
+        document.getElementById('colorModeSelect').addEventListener('change', (e) => {
+            network.setColorMode(e.target.value);
+            
+            // Show/hide load details button based on data availability
+            const dataAvailability = network.checkDataAvailability(e.target.value);
+            const loadDetailsBtn = document.getElementById('loadDetailsBtn');
+            
+            if (dataAvailability.missing > 0) {
+                loadDetailsBtn.style.display = 'inline-block';
+                loadDetailsBtn.textContent = `📄 Load ${dataAvailability.missing} Details`;
+            } else {
+                loadDetailsBtn.style.display = 'none';
+            }
+        });
+
+        // Load details button
+        document.getElementById('loadDetailsBtn').addEventListener('click', () => {
+            network.loadMissingDetailsForColorMode();
+        });
 
         // Add AI insights button if it exists
         const aiBtn = document.getElementById('aiBtn');
@@ -580,9 +601,19 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.showNotification('AI analysis generated!', 'success');
         } catch (error) {
             if (error.message.includes('AI service not available')) {
-                ui.showNotification('AI features require Gemini API key', 'error');
+                ui.showNotification('AI features require Gemini API key. Check server configuration.', 'error');
+                console.log('💡 To enable AI features:');
+                console.log('1. Get API key from https://makersuite.google.com/app/apikey');
+                console.log('2. Add GEMINI_API_KEY=your_key to .env file');
+                console.log('3. Restart the server');
+            } else if (error.message.includes('quota exceeded')) {
+                ui.showNotification('AI quota exceeded. You have reached the daily limit of 50 free requests. Try again tomorrow!', 'warning');
+                console.log('💡 Gemini API Free Tier Limits:');
+                console.log('• 50 requests per day');
+                console.log('• Resets every 24 hours');
+                console.log('• Consider upgrading for higher limits: https://ai.google.dev/pricing');
             } else {
-                ui.showNotification('Failed to generate AI insights', 'error');
+                ui.showNotification('Failed to generate AI insights: ' + error.message, 'error');
             }
         } finally {
             ui.showLoading(false);
@@ -665,27 +696,72 @@ document.addEventListener('DOMContentLoaded', () => {
             const health = await api.checkAIHealth();
             if (health.status === 'healthy') {
                 console.log('✅ AI features available');
-                // Add AI button to header if not exists
-                addAIButton();
+                addAIButton(true); // AI is working
             } else {
                 console.log('⚠️ AI features not available:', health.reason);
+                addAIButton(false, health.reason); // AI not working, show grayed out
             }
         } catch (error) {
             console.log('❌ AI service check failed');
+            addAIButton(false, 'AI service unavailable'); // Show grayed out with error
         }
     }
 
-    function addAIButton() {
+    function addAIButton(isHealthy = true, reason = '') {
         const controls = document.querySelector('.controls');
         if (controls && !document.getElementById('aiBtn')) {
+            console.log('🔧 Adding AI button to controls');
             const aiBtn = document.createElement('button');
             aiBtn.id = 'aiBtn';
             aiBtn.className = 'control-btn';
             aiBtn.innerHTML = '🤖 AI Insights';
-            aiBtn.title = 'Generate AI analysis of your network';
-            controls.appendChild(aiBtn);
             
-            aiBtn.addEventListener('click', () => generateNetworkInsights());
+            if (isHealthy) {
+                // AI is working - normal button
+                aiBtn.title = 'Generate AI analysis of your network';
+                aiBtn.addEventListener('click', () => generateNetworkInsights());
+            } else {
+                // AI not working - grayed out button
+                aiBtn.style.opacity = '0.5';
+                aiBtn.style.cursor = 'not-allowed';
+                aiBtn.style.filter = 'grayscale(1)';
+                
+                // Set helpful tooltip based on reason
+                let tooltip = 'AI features unavailable';
+                if (reason.includes('quota') || reason.includes('429')) {
+                    tooltip = 'AI quota exceeded - Try again tomorrow or upgrade plan';
+                } else if (reason.includes('API key') || reason.includes('key not configured')) {
+                    tooltip = 'AI requires Gemini API key configuration';
+                } else {
+                    tooltip = `AI unavailable: ${reason}`;
+                }
+                aiBtn.title = tooltip;
+                
+                // Show helpful message when clicked
+                aiBtn.addEventListener('click', () => {
+                    if (reason.includes('quota') || reason.includes('429')) {
+                        ui.showNotification('AI quota exceeded. You have reached the daily limit. Try again tomorrow!', 'warning');
+                    } else if (reason.includes('API key') || reason.includes('key not configured')) {
+                        ui.showNotification('AI requires Gemini API key. Check server configuration.', 'error');
+                    } else {
+                        ui.showNotification(`AI features unavailable: ${reason}`, 'error');
+                    }
+                });
+            }
+            
+            // Insert before the color mode select to maintain order
+            const colorModeSelect = document.getElementById('colorModeSelect');
+            if (colorModeSelect) {
+                controls.insertBefore(aiBtn, colorModeSelect);
+                console.log('✅ AI button inserted before color mode select');
+            } else {
+                controls.appendChild(aiBtn);
+                console.log('✅ AI button appended to controls');
+            }
+        } else if (!controls) {
+            console.log('❌ Controls container not found');
+        } else {
+            console.log('ℹ️ AI button already exists');
         }
     }
 

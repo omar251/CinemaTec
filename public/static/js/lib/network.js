@@ -42,9 +42,9 @@ export class DynamicMovieNetwork {
         this.nodeContainer = this.g.append('g').attr('class', 'nodes');
         this.labelContainer = this.g.append('g').attr('class', 'labels');
 
-        this.colorScale = d3.scaleOrdinal()
-            .domain([0, 1, 2, 3])
-            .range(['#e94560', '#f6e05e', '#10b981', '#3b82f6']);
+        // Color coding options
+        this.colorMode = 'depth'; // Default mode
+        this.setupColorScales();
     }
 
     setupEventListeners() {
@@ -229,7 +229,7 @@ export class DynamicMovieNetwork {
             .append('circle')
             .attr('class', 'node')
             .attr('r', d => d.depth === 0 ? 15 : 10)
-            .attr('fill', d => this.colorScale(Math.min(d.depth, 3)))
+            .attr('fill', d => this.getNodeColor(d))
             .call(this.getDragBehavior())
             .on('click', (event, d) => this.handleNodeClick(event, d))
             .on('mouseover', (event, d) => ui.showTooltip(event, d))
@@ -237,7 +237,7 @@ export class DynamicMovieNetwork {
 
         nodeEnter.merge(nodeSelection)
             .attr('class', d => `node ${d.expanding ? 'expanding' : ''}`)
-            .attr('fill', d => this.colorScale(Math.min(d.depth, 3)));
+            .attr('fill', d => this.getNodeColor(d));
 
         const labelSelection = this.labelContainer
             .selectAll('text')
@@ -531,5 +531,212 @@ export class DynamicMovieNetwork {
         this.svg.selectAll('.node, .link, .node-label')
             .classed('highlighted', false)
             .classed('dimmed', false);
+    }
+
+    // Setup different color scales for various purposes
+    setupColorScales() {
+        this.colorScales = {
+            // Original depth-based coloring
+            depth: d3.scaleOrdinal()
+                .domain([0, 1, 2, 3])
+                .range(['#e94560', '#f6e05e', '#10b981', '#3b82f6']),
+            
+            // Rating-based coloring (poor to excellent)
+            rating: d3.scaleSequential()
+                .domain([0, 10])
+                .interpolator(d3.interpolateRdYlGn),
+            
+            // Genre-based coloring
+            genre: d3.scaleOrdinal()
+                .domain(['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Thriller', 'Adventure', 'Fantasy', 'Crime'])
+                .range(['#ff4757', '#ffa502', '#2ed573', '#5352ed', '#ff6b81', '#ff9ff3', '#54a0ff', '#7bed9f', '#a4b0be', '#2f3542']),
+            
+            // Year-based coloring (decades)
+            year: d3.scaleOrdinal()
+                .domain(['1970s', '1980s', '1990s', '2000s', '2010s', '2020s'])
+                .range(['#8b4513', '#ff6347', '#ffd700', '#32cd32', '#1e90ff', '#ff1493']),
+            
+            // Popularity-based coloring (watchers count)
+            popularity: d3.scaleSequential()
+                .domain([0, 100000])
+                .interpolator(d3.interpolateViridis),
+            
+            // Runtime-based coloring
+            runtime: d3.scaleSequential()
+                .domain([60, 180])
+                .interpolator(d3.interpolatePlasma)
+        };
+    }
+
+    // Get node color based on current color mode
+    getNodeColor(node) {
+        const details = node.fullDetails || node.basicDetails || {};
+        
+        switch (this.colorMode) {
+            case 'depth':
+                return this.colorScales.depth(Math.min(node.depth, 3));
+            
+            case 'rating':
+                // Check if rating data is available
+                if (!details.rating && !node.fullDetails) {
+                    return '#666666'; // Gray for missing data
+                }
+                const rating = details.rating || 5;
+                return this.colorScales.rating(rating);
+            
+            case 'genre':
+                // Check if genre data is available
+                if (!details.genres?.length && !node.fullDetails) {
+                    return '#666666'; // Gray for missing data
+                }
+                const primaryGenre = details.genres?.[0] || 'Unknown';
+                return this.colorScales.genre(primaryGenre);
+            
+            case 'year':
+                // Year is always available
+                const decade = this.getDecade(node.year);
+                return this.colorScales.year(decade);
+            
+            case 'popularity':
+                // Check if popularity data is available
+                if (!details.stats?.watchers && !node.fullDetails) {
+                    return '#666666'; // Gray for missing data
+                }
+                const watchers = details.stats?.watchers || 0;
+                return this.colorScales.popularity(watchers);
+            
+            case 'runtime':
+                // Check if runtime data is available
+                if (!details.runtime && !node.fullDetails) {
+                    return '#666666'; // Gray for missing data
+                }
+                const runtime = details.runtime || 90;
+                return this.colorScales.runtime(runtime);
+            
+            default:
+                return this.colorScales.depth(Math.min(node.depth, 3));
+        }
+    }
+
+    // Helper function to get decade from year
+    getDecade(year) {
+        const decade = Math.floor(year / 10) * 10;
+        return `${decade}s`;
+    }
+
+    // Change color mode and update visualization
+    setColorMode(mode) {
+        this.colorMode = mode;
+        this.updateVisualization();
+        
+        // Show notification about color change and data availability
+        const modeNames = {
+            depth: 'Network Depth',
+            rating: 'Movie Rating',
+            genre: 'Primary Genre',
+            year: 'Release Decade',
+            popularity: 'Popularity (Watchers)',
+            runtime: 'Movie Runtime'
+        };
+        
+        // Check how many nodes have the required data
+        const dataAvailability = this.checkDataAvailability(mode);
+        let message = `Color mode: ${modeNames[mode]}`;
+        
+        if (dataAvailability.missing > 0) {
+            message += ` (${dataAvailability.missing} movies need details loaded)`;
+        }
+        
+        ui.showNotification(message, dataAvailability.missing > 0 ? 'warning' : 'success');
+    }
+
+    // Check data availability for color modes
+    checkDataAvailability(mode) {
+        let available = 0;
+        let missing = 0;
+        
+        this.nodes.forEach(node => {
+            const details = node.fullDetails || node.basicDetails || {};
+            let hasData = false;
+            
+            switch (mode) {
+                case 'depth':
+                case 'year':
+                    hasData = true; // Always available
+                    break;
+                case 'genre':
+                    hasData = !!details.genres?.length || !!node.fullDetails;
+                    break;
+                case 'rating':
+                    hasData = !!details.rating || !!node.fullDetails;
+                    break;
+                case 'popularity':
+                    hasData = !!details.stats?.watchers || !!node.fullDetails;
+                    break;
+                case 'runtime':
+                    hasData = !!details.runtime || !!node.fullDetails;
+                    break;
+            }
+            
+            if (hasData) available++;
+            else missing++;
+        });
+        
+        return { available, missing };
+    }
+
+    // Load all missing details for current color mode
+    async loadMissingDetailsForColorMode() {
+        const mode = this.colorMode;
+        const nodesToLoad = [];
+        
+        this.nodes.forEach(node => {
+            if (!node.fullDetails) {
+                const details = node.basicDetails || {};
+                let needsDetails = false;
+                
+                switch (mode) {
+                    case 'genre':
+                        needsDetails = !details.genres?.length;
+                        break;
+                    case 'rating':
+                        needsDetails = !details.rating;
+                        break;
+                    case 'popularity':
+                        needsDetails = !details.stats?.watchers;
+                        break;
+                    case 'runtime':
+                        needsDetails = !details.runtime;
+                        break;
+                }
+                
+                if (needsDetails) {
+                    nodesToLoad.push(node);
+                }
+            }
+        });
+        
+        if (nodesToLoad.length > 0) {
+            ui.showLoading(true);
+            ui.showNotification(`Loading details for ${nodesToLoad.length} movies...`);
+            
+            try {
+                for (const node of nodesToLoad) {
+                    const fullDetails = await api.getFullMovieDetails(node.traktId);
+                    if (fullDetails) {
+                        node.fullDetails = fullDetails;
+                    }
+                }
+                
+                this.updateVisualization();
+                ui.updateSidebar(this.nodes);
+                ui.showNotification(`Loaded details for ${nodesToLoad.length} movies!`, 'success');
+                
+            } catch (error) {
+                ui.showNotification('Failed to load some movie details', 'error');
+            } finally {
+                ui.showLoading(false);
+            }
+        }
     }
 }

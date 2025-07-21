@@ -646,6 +646,23 @@
             background: rgba(233, 69, 96, 0.1);
         }
 
+        /* Color mode dropdown styling */
+        #colorModeSelect {
+            background: var(--glass-bg) !important;
+            color: var(--text-color) !important;
+        }
+
+        #colorModeSelect option {
+            background: var(--primary-color) !important;
+            color: var(--text-color) !important;
+            padding: 8px;
+        }
+
+        #colorModeSelect:focus {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -692,6 +709,35 @@
             <button class="control-btn" id="clearBtn">🗑️ Clear</button>
             <button class="control-btn" id="centerBtn">🎯 Center</button>
             <button class="control-btn" id="labelsBtn">🏷️ Labels</button>
+            <select class="control-btn" id="colorModeSelect" style="
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                color: var(--text-color);
+                padding: 8px 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                cursor: pointer;
+                backdrop-filter: blur(10px);
+            ">
+                <option value="depth" style="background: var(--primary-color); color: var(--text-color);">🌈 Network Depth</option>
+                <option value="year" style="background: var(--primary-color); color: var(--text-color);">📅 Release Decade</option>
+                <option value="genre" style="background: var(--primary-color); color: var(--text-color);">🎭 Primary Genre*</option>
+                <option value="rating" style="background: var(--primary-color); color: var(--text-color);">⭐ Movie Rating*</option>
+                <option value="popularity" style="background: var(--primary-color); color: var(--text-color);">👥 Popularity*</option>
+                <option value="runtime" style="background: var(--primary-color); color: var(--text-color);">⏱️ Runtime*</option>
+            </select>
+            <button class="control-btn" id="loadDetailsBtn" style="
+                background: var(--glass-bg);
+                border: 1px solid var(--gemini-accent);
+                color: var(--gemini-accent);
+                padding: 8px 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                cursor: pointer;
+                display: none;
+            " title="Load missing movie details for current color mode">
+                📄 Load Details
+            </button>
         </div>
     </div>
 

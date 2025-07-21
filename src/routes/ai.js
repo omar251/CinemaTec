@@ -119,19 +119,21 @@ router.post('/network-analysis', async (req, res) => {
 
   } catch (error) {
     logger.error(`AI network analysis failed: ${error.message}`, {
-      nodeCount: req.body.networkData?.nodes?.length
+      nodeCount: req.body.networkData?.nodes?.length,
+      errorStack: error.stack
     });
 
     if (error.message.includes('AI service not available')) {
       return res.status(503).json({ 
         error: 'AI service not available',
-        details: 'Gemini API key not configured'
+        details: 'Gemini API key not configured. Add GEMINI_API_KEY to your .env file.'
       });
     }
 
     res.status(500).json({ 
       error: 'Failed to generate network analysis',
-      details: error.message
+      details: error.message,
+      hint: 'Check if GEMINI_API_KEY is configured in .env file'
     });
   }
 });

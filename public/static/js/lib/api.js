@@ -197,10 +197,18 @@ export async function generateNetworkAnalysis(networkData) {
         });
 
         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
             if (response.status === 503) {
-                throw new Error('AI service not available');
+                throw new Error('AI service not available - ' + (errorData.details || 'Gemini API key not configured'));
             }
-            throw new Error('Failed to generate analysis');
+            
+            // Handle quota exceeded error specifically
+            const errorMessage = errorData.details || errorData.error || 'Failed to generate analysis';
+            if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('Too Many Requests')) {
+                throw new Error('AI quota exceeded - You have reached the daily limit of 50 free requests. Try again tomorrow or upgrade your plan.');
+            }
+            
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
