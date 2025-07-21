@@ -14,7 +14,14 @@ export function showNotification(message, type = 'success') {
     }, 3000);
 }
 
+let allNodes = []; // Store all nodes for filtering
+
 export function updateSidebar(nodes) {
+    allNodes = nodes; // Store nodes globally for search
+    renderSidebarMovies(nodes);
+}
+
+function renderSidebarMovies(nodes) {
     const movieList = document.getElementById('movieList');
     
     if (nodes.length === 0) {
@@ -76,6 +83,9 @@ export function updateSidebar(nodes) {
 
     // Add hover event listeners for network highlighting
     setupSidebarHoverEffects();
+    
+    // Setup search functionality if not already done
+    setupSidebarSearch();
 }
 
 export function updateStats(nodes, links) {
@@ -155,6 +165,71 @@ function handleSidebarLeave(e) {
     if (movieItem && !e.relatedTarget?.closest('.movie-item')) {
         // Dispatch custom event to clear network highlighting
         document.dispatchEvent(new CustomEvent('clearNetworkHighlight'));
+    }
+}
+
+// Setup sidebar search functionality
+function setupSidebarSearch() {
+    const searchInput = document.getElementById('sidebarSearch');
+    if (!searchInput || searchInput.dataset.initialized) return;
+    
+    searchInput.dataset.initialized = 'true';
+    
+    // Add search event listeners
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        filterSidebarMovies(query);
+    });
+    
+    // Clear search on escape
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            e.target.value = '';
+            filterSidebarMovies('');
+        }
+    });
+}
+
+// Filter sidebar movies based on search query
+function filterSidebarMovies(query) {
+    if (!query) {
+        // Show all movies
+        renderSidebarMovies(allNodes);
+        return;
+    }
+    
+    // Filter movies by title, year, or genres
+    const filteredNodes = allNodes.filter(node => {
+        const details = node.fullDetails || node.basicDetails || {};
+        
+        // Search in title
+        if (node.title.toLowerCase().includes(query)) return true;
+        
+        // Search in year
+        if (node.year.toString().includes(query)) return true;
+        
+        // Search in genres
+        if (details.genres && details.genres.some(genre => 
+            genre.toLowerCase().includes(query)
+        )) return true;
+        
+        // Search in overview
+        if (details.overview && details.overview.toLowerCase().includes(query)) return true;
+        
+        return false;
+    });
+    
+    renderSidebarMovies(filteredNodes);
+    
+    // Show search results count
+    if (filteredNodes.length === 0) {
+        const movieList = document.getElementById('movieList');
+        movieList.innerHTML = `
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                <div style="margin-bottom: 10px;">🔍 No movies found</div>
+                <div style="font-size: 11px;">Try searching for title, year, or genre</div>
+            </div>
+        `;
     }
 }
 

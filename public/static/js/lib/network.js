@@ -301,9 +301,17 @@ export class DynamicMovieNetwork {
         const node = this.nodes.find(n => n.id === nodeId);
         if (!node) return;
 
+        // Get current viewport dimensions
+        const svgRect = this.svg.node().getBoundingClientRect();
+        const centerX = svgRect.width / 2;
+        const centerY = svgRect.height / 2;
+
+        // Calculate the transform to center the node
+        const scale = 1.5;
         const transform = d3.zoomIdentity
-            .translate(this.width / 2 - node.x, this.height / 2 - node.y)
-            .scale(1.5);
+            .translate(centerX, centerY)
+            .scale(scale)
+            .translate(-node.x, -node.y);
 
         this.svg.transition()
             .duration(750)
@@ -352,8 +360,28 @@ export class DynamicMovieNetwork {
     }
 
     centerNetwork() {
-        const transform = d3.zoomIdentity.translate(this.width / 2, this.height / 2).scale(1);
-        this.svg.transition().duration(750).call(this.zoom.transform, transform);
+        // Get current viewport dimensions
+        const svgRect = this.svg.node().getBoundingClientRect();
+        const centerX = svgRect.width / 2;
+        const centerY = svgRect.height / 2;
+
+        // Calculate the center of all nodes
+        if (this.nodes.length > 0) {
+            const avgX = this.nodes.reduce((sum, node) => sum + node.x, 0) / this.nodes.length;
+            const avgY = this.nodes.reduce((sum, node) => sum + node.y, 0) / this.nodes.length;
+
+            // Create transform to center the network
+            const transform = d3.zoomIdentity
+                .translate(centerX, centerY)
+                .scale(1)
+                .translate(-avgX, -avgY);
+
+            this.svg.transition().duration(750).call(this.zoom.transform, transform);
+        } else {
+            // If no nodes, just reset to center
+            const transform = d3.zoomIdentity.translate(centerX, centerY).scale(1);
+            this.svg.transition().duration(750).call(this.zoom.transform, transform);
+        }
     }
 
     toggleLabels() {

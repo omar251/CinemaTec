@@ -700,7 +700,22 @@
     </div>
 
     <div class="sidebar">
-        <h3>🎭 Network Movies</h3>
+        <div class="sidebar-header">
+            <h3>🎭 Network Movies</h3>
+            <div class="sidebar-search" style="margin-top: 10px;">
+                <input type="text" id="sidebarSearch" placeholder="🔍 Search movies..." style="
+                    width: 100%;
+                    padding: 8px 12px;
+                    background: var(--glass-bg);
+                    border: 1px solid var(--glass-border);
+                    border-radius: 6px;
+                    color: var(--text-color);
+                    font-size: 12px;
+                    outline: none;
+                    transition: all 0.2s;
+                " />
+            </div>
+        </div>
         <div id="movieList">
             <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
                 Search for a movie to start building your network!
