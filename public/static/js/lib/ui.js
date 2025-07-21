@@ -72,6 +72,9 @@ export function updateSidebar(nodes) {
             </div>
         `;
     }).join('');
+
+    // Add hover event listeners for network highlighting
+    setupSidebarHoverEffects();
 }
 
 export function updateStats(nodes, links) {
@@ -117,6 +120,41 @@ export function showTooltip(event, d) {
 
 export function hideTooltip() {
     document.getElementById('tooltip').style.display = 'none';
+}
+
+// Setup hover effects for sidebar movie items to highlight network nodes
+function setupSidebarHoverEffects() {
+    const movieList = document.getElementById('movieList');
+    
+    // Remove existing listeners to prevent duplicates
+    movieList.removeEventListener('mouseenter', handleSidebarHover, true);
+    movieList.removeEventListener('mouseleave', handleSidebarLeave, true);
+    
+    // Add new listeners
+    movieList.addEventListener('mouseenter', handleSidebarHover, true);
+    movieList.addEventListener('mouseleave', handleSidebarLeave, true);
+}
+
+function handleSidebarHover(e) {
+    const movieItem = e.target.closest('.movie-item');
+    if (movieItem && !e.target.closest('.expand-node, .load-details')) {
+        const nodeId = parseInt(movieItem.dataset.nodeId);
+        if (nodeId !== undefined && !isNaN(nodeId)) {
+            console.log('🎯 Highlighting node:', nodeId); // Debug log
+            // Dispatch custom event for network highlighting
+            document.dispatchEvent(new CustomEvent('highlightNetworkNode', { 
+                detail: { nodeId } 
+            }));
+        }
+    }
+}
+
+function handleSidebarLeave(e) {
+    const movieItem = e.target.closest('.movie-item');
+    if (movieItem && !e.relatedTarget?.closest('.movie-item')) {
+        // Dispatch custom event to clear network highlighting
+        document.dispatchEvent(new CustomEvent('clearNetworkHighlight'));
+    }
 }
 
 export function showMovieDetailsModal(node) {

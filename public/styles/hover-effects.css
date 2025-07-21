@@ -1,0 +1,60 @@
+/* Hover effects for network highlighting */
+
+/* Highlighted nodes */
+.node.highlighted circle {
+    stroke: #e94560 !important;
+    stroke-width: 4px !important;
+    filter: brightness(1.3) drop-shadow(0 0 8px #e94560);
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+}
+
+/* Alternative highlighting with box-shadow for better browser support */
+.node.highlighted {
+    filter: drop-shadow(0 0 10px #e94560) drop-shadow(0 0 20px #e94560);
+}
+
+/* Dimmed nodes */
+.node.dimmed circle {
+    opacity: 0.3;
+    filter: grayscale(0.5);
+    transition: all 0.2s ease;
+}
+
+/* Highlighted links */
+.link.highlighted {
+    stroke: var(--accent-color) !important;
+    stroke-width: 3px !important;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px var(--accent-color));
+    transition: all 0.2s ease;
+}
+
+/* Dimmed links */
+.link.dimmed {
+    opacity: 0.2;
+    transition: all 0.2s ease;
+}
+
+/* Highlighted labels */
+.label.highlighted {
+    fill: var(--accent-color) !important;
+    font-weight: bold;
+    font-size: 14px !important;
+    filter: drop-shadow(0 0 4px var(--accent-color));
+    transition: all 0.2s ease;
+}
+
+/* Dimmed labels */
+.label.dimmed {
+    opacity: 0.3;
+    transition: all 0.2s ease;
+}
+
+/* Enhanced movie item hover effect when highlighting network */
+.movie-item.network-highlighted {
+    background: rgba(233, 69, 96, 0.2) !important;
+    border-color: var(--accent-color) !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3) !important;
+}

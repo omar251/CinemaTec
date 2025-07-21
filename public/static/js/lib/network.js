@@ -91,6 +91,15 @@ export class DynamicMovieNetwork {
                 this.expandNode(node);
             }
         });
+
+        // Handle sidebar hover effects for network highlighting
+        document.addEventListener('highlightNetworkNode', (e) => {
+            this.highlightNode(e.detail.nodeId);
+        });
+
+        document.addEventListener('clearNetworkHighlight', () => {
+            this.clearHighlight();
+        });
     }
 
     handleResize() {
@@ -413,6 +422,7 @@ export class DynamicMovieNetwork {
                     node.fullDetails = fullDetails;
                     ui.updateSidebar(this.nodes);
                 }
+
             }
             
             // Show detailed movie modal
@@ -443,5 +453,55 @@ export class DynamicMovieNetwork {
         } finally {
             ui.showLoading(false);
         }
+    }
+
+    // Highlight a specific node and dim others
+    highlightNode(nodeId) {
+        if (!this.svg) {
+            console.log('❌ No SVG found for highlighting');
+            return;
+        }
+
+        console.log('✨ Highlighting node in network:', nodeId);
+        console.log('📊 Available nodes:', this.nodes.map(n => n.id));
+
+        // Convert nodeId to number for comparison
+        const targetNodeId = parseInt(nodeId);
+
+        this.svg.selectAll('.node')
+            .classed('highlighted', d => {
+                const isHighlighted = d.id === targetNodeId;
+                if (isHighlighted) console.log('🎯 Found matching node:', d.title);
+                return isHighlighted;
+            })
+            .classed('dimmed', d => d.id !== targetNodeId);
+
+        this.svg.selectAll('.link')
+            .classed('highlighted', d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return sourceId === targetNodeId || targetId === targetNodeId;
+            })
+            .classed('dimmed', d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return sourceId !== targetNodeId && targetId !== targetNodeId;
+            });
+
+        // Also highlight labels if they're visible
+        if (this.showLabels) {
+            this.svg.selectAll('.node-label')
+                .classed('highlighted', d => d.id === targetNodeId)
+                .classed('dimmed', d => d.id !== targetNodeId);
+        }
+    }
+
+    // Clear all highlighting
+    clearHighlight() {
+        if (!this.svg) return;
+
+        this.svg.selectAll('.node, .link, .node-label')
+            .classed('highlighted', false)
+            .classed('dimmed', false);
     }
 }
