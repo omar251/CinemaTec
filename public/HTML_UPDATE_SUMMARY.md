@@ -8,7 +8,7 @@
 <title>Dynamic Movie Network Explorer</title>
 
 <!-- After -->
-<title>Enhanced Movie Network Explorer - AI-Powered</title>
+<title>CinemaTec Movie Network Explorer - AI-Powered</title>
 <meta name="description" content="Explore movie connections with AI insights, enhanced search, and interactive network visualization">
 <meta name="keywords" content="movies, network, visualization, AI, Trakt, TMDB, Gemini">
 ```
@@ -19,7 +19,7 @@
 <h1>🎬 Movie Network Explorer</h1>
 
 <!-- After -->
-<h1>🎬 Enhanced Movie Network Explorer</h1>
+<h1>🎬 CinemaTec Movie Network Explorer</h1>
 ```
 
 ### **3. Added Visual Enhancement**
@@ -37,7 +37,7 @@
 <!-- D3.js for network visualization -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 
-<!-- Enhanced Movie Network Explorer - All features integrated -->
+<!-- CinemaTec Movie Network Explorer - All features integrated -->
 <script type="module" src="static/js/app.js"></script>
 ```
 

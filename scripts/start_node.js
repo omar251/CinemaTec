@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Startup script for the Node.js Enhanced Trakt API Explorer
+ * Startup script for the Node.js CinemaTec Movie Network Explorer
  */
 const fs = require('fs');
 const path = require('path');
@@ -126,7 +126,7 @@ async function openFrontend() {
 }
 
 function main() {
-  console.log('🎬 Enhanced Trakt API Explorer - Node.js Startup');
+  console.log('🎬 CinemaTec Movie Network Explorer - Node.js Startup');
   console.log('='.repeat(50));
   
   // Check requirements

@@ -1,4 +1,4 @@
-# Enhanced Trakt API Explorer
+# CinemaTec Movie Network Explorer
 
 A modern web application for exploring movies using the Trakt API with a high-performance Node.js backend.
 
