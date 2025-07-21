@@ -66,14 +66,14 @@ npm run dev
 npm start
 
 # Or directly
-node server.js
+node src/server.js
 ```
 
 ### Environment Variables
 
 ```bash
 # With environment variables directly
-TRAKT_API_KEY=your_key TMDB_API_KEY=your_key node server.js
+TRAKT_API_KEY=your_key TMDB_API_KEY=your_key node src/server.js
 ```
 
 ## 📊 Performance Testing
@@ -140,10 +140,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
-COPY . .
+COPY src/ src/
+COPY public/ public/
+
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]
 ```
 
 ### Heroku
@@ -166,7 +168,7 @@ git push heroku main
 npm install -g pm2
 
 # Start with PM2
-pm2 start server.js --name "trakt-api"
+pm2 start src/server.js --name "trakt-api"
 
 # Save PM2 configuration
 pm2 save
@@ -194,13 +196,14 @@ pm2 startup
 ### Project Structure
 
 ```
-├── server.js              # Main Node.js server
-├── package.json           # Node.js dependencies
-├── start_node.js          # Node.js startup script
-├── performance_test.js    # Performance testing
-├── index.html            # Frontend (unchanged)
-├── .env.example          # Environment template
-└── README_NODE.md        # This file
+├── src/
+│   └── server.js
+├── public/
+│   ├── index.html
+│   └── static/
+├── package.json
+├── Dockerfile
+└── .env.example
 ```
 
 ### Adding New Features

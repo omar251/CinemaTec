@@ -10,7 +10,8 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy application code
-COPY . .
+COPY src/ src/
+COPY public/ public/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
@@ -28,4 +29,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start application
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]

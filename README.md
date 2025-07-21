@@ -95,20 +95,17 @@ python -m http.server 8080
 ## Project Structure
 
 ```
-├── server.js              # Main Node.js Express server
-├── index.html             # Frontend application
-├── package.json           # Node.js dependencies
-├── Dockerfile             # Docker configuration
-├── .env.example          # Environment variables template
+├── src/                  # Backend source code
+│   └── server.js         # Main Node.js Express server
+├── public/               # Frontend application
+│   ├── index.html        # Main HTML file
+│   └── static/           # CSS and JS files
 ├── scripts/              # Utility scripts
-│   ├── start_node.js     # Smart startup script
-│   ├── performance_test.js # Performance benchmarks
-│   └── test_migration.js # Migration validation
 ├── docs/                 # Documentation
-│   ├── README_NODE.md    # Detailed Node.js docs
-│   └── migration_guide.md # Migration guide
-└── archive/              # Legacy Python files
-    └── python/           # Original Python implementation
+├── archive/              # Legacy Python files
+├── package.json          # Node.js dependencies
+├── Dockerfile            # Docker configuration
+└── .env.example          # Environment variables template
 ```
 
 ## Security Features

@@ -1,10 +1,11 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const helmet = require("helmet");
 const compression = require("compression");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const NetworkStorage = require("./scripts/network_storage");
+const NetworkStorage = require("./lib/network_storage");
 require("dotenv").config();
 
 // Simple in-memory cache implementation
@@ -112,7 +113,7 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from the project root directory
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // API Configuration
 const TRAKT_API_KEY = process.env.TRAKT_API_KEY;
