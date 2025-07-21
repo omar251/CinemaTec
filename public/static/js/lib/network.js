@@ -553,8 +553,8 @@ export class DynamicMovieNetwork {
             
             // Year-based coloring (decades)
             year: d3.scaleOrdinal()
-                .domain(['1970s', '1980s', '1990s', '2000s', '2010s', '2020s'])
-                .range(['#8b4513', '#ff6347', '#ffd700', '#32cd32', '#1e90ff', '#ff1493']),
+                .domain(['1920s', '1930s', '1940s', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s', '2030s'])
+                .range(['#2c1810', '#5d4037', '#8b4513', '#d2691e', '#cd853f', '#ff6347', '#ffd700', '#32cd32', '#1e90ff', '#ff1493', '#9c27b0', '#e91e63']),
             
             // Popularity-based coloring (watchers count)
             popularity: d3.scaleSequential()
@@ -589,8 +589,12 @@ export class DynamicMovieNetwork {
                 if (!details.genres?.length && !node.fullDetails) {
                     return '#666666'; // Gray for missing data
                 }
-                const primaryGenre = details.genres?.[0] || 'Unknown';
-                return this.colorScales.genre(primaryGenre);
+                const rawGenre = details.genres?.[0] || 'Unknown';
+                // Capitalize first letter to match color scale domain
+                const primaryGenre = rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+                const color = this.colorScales.genre(primaryGenre);
+                console.log(`🎭 Genre color for "${node.title}": ${rawGenre} -> ${primaryGenre} -> ${color}`);
+                return color;
             
             case 'year':
                 // Year is always available
@@ -648,6 +652,103 @@ export class DynamicMovieNetwork {
         }
         
         ui.showNotification(message, dataAvailability.missing > 0 ? 'warning' : 'success');
+        
+        // Update legend
+        this.updateColorLegend(mode);
+    }
+
+    // Update the color legend based on current mode
+    updateColorLegend(mode) {
+        const legend = document.getElementById('colorLegend');
+        const legendTitle = document.getElementById('legendTitle');
+        const legendContent = document.getElementById('legendContent');
+        
+        if (!legend || !legendTitle || !legendContent) return;
+        
+        const modeNames = {
+            depth: 'Network Depth',
+            rating: 'Movie Rating',
+            genre: 'Primary Genre', 
+            year: 'Release Decade',
+            popularity: 'Popularity (Watchers)',
+            runtime: 'Movie Runtime'
+        };
+        
+        legendTitle.textContent = modeNames[mode] || 'Color Legend';
+        
+        let legendHTML = '';
+        
+        switch (mode) {
+            case 'depth':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: #e94560;"></span> Depth 0 (Your searches)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #f6e05e;"></span> Depth 1 (Direct connections)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span> Depth 2 (Second level)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #3b82f6;"></span> Depth 3+ (Further levels)</div>
+                `;
+                break;
+                
+            case 'rating':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(2)};"></span> Poor (0-3)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(5)};"></span> Average (4-6)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(8)};"></span> Excellent (7-10)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No rating data</div>
+                `;
+                break;
+                
+            case 'genre':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Action')};"></span> Action</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Comedy')};"></span> Comedy</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Drama')};"></span> Drama</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Sci-Fi')};"></span> Sci-Fi</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Horror')};"></span> Horror</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Romance')};"></span> Romance</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No genre data</div>
+                `;
+                break;
+                
+            case 'year':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1920s')};"></span> 1920s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1930s')};"></span> 1930s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1940s')};"></span> 1940s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1950s')};"></span> 1950s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1960s')};"></span> 1960s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1970s')};"></span> 1970s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1980s')};"></span> 1980s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1990s')};"></span> 1990s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2000s')};"></span> 2000s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2010s')};"></span> 2010s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2020s')};"></span> 2020s</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2030s')};"></span> 2030s</div>
+                `;
+                break;
+                
+            case 'popularity':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(5000)};"></span> Low popularity</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(25000)};"></span> Medium popularity</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(50000)};"></span> High popularity</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(80000)};"></span> Very popular</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No popularity data</div>
+                `;
+                break;
+                
+            case 'runtime':
+                legendHTML = `
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(75)};"></span> Short (60-90 min)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(105)};"></span> Medium (90-120 min)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(135)};"></span> Long (120-150 min)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(165)};"></span> Very long (150+ min)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No runtime data</div>
+                `;
+                break;
+        }
+        
+        legendContent.innerHTML = legendHTML;
+        legend.style.display = 'block';
     }
 
     // Check data availability for color modes

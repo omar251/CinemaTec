@@ -88,6 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
             network.loadMissingDetailsForColorMode();
         });
 
+        // Legend close button
+        document.getElementById('closeLegend').addEventListener('click', () => {
+            document.getElementById('colorLegend').style.display = 'none';
+        });
+
         // Add AI insights button if it exists
         const aiBtn = document.getElementById('aiBtn');
         if (aiBtn) {
