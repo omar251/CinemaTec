@@ -10,7 +10,7 @@ async function testMigration() {
   console.log('='.repeat(40));
   
   // Check if server is running
-  const baseUrl = 'http://localhost:5000';
+  const baseUrl = 'http://127.0.0.1:5000';
   
   try {
     console.log('\n1. 🏥 Testing health endpoint...');

@@ -72,7 +72,7 @@ function checkEnvFile() {
 function startServer() {
   console.log('🚀 Starting Node.js server...');
   
-  const serverProcess = spawn('node', ['server.js'], {
+  const serverProcess = spawn('node', ['src/server.js'], {
     stdio: 'pipe',
     env: { ...process.env }
   });

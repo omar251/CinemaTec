@@ -35,9 +35,9 @@ async function testEndpoint(url, description) {
 
 async function main() {
   console.log('🚀 Node.js Backend Performance Test');
-  console.log('=' * 60);
+  console.log('='.repeat(60));
   
-  const baseUrl = '/api';
+  const baseUrl = 'http://127.0.0.1:5000/api';
   const testQuery = 'batman';
   
   // Test search endpoints
