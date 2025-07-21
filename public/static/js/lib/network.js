@@ -65,10 +65,31 @@ export class DynamicMovieNetwork {
                     this.loadMovieDetails(nodeId);
                 }
             }
+
+            if (e.target.closest('.expand-node')) {
+                e.stopPropagation();
+                const expandBtn = e.target.closest('.expand-node');
+                const nodeId = parseInt(expandBtn.dataset.nodeId);
+                if (nodeId !== undefined) {
+                    const node = this.nodes.find(n => n.id === nodeId);
+                    if (node) {
+                        this.expandNode(node);
+                    }
+                }
+            }
         });
 
         window.addEventListener('resize', () => {
             this.handleResize();
+        });
+
+        // Listen for expand node events from movie details modal
+        document.addEventListener('expandNode', (e) => {
+            const nodeId = e.detail.nodeId;
+            const node = this.nodes.find(n => n.id === nodeId);
+            if (node) {
+                this.expandNode(node);
+            }
         });
     }
 
@@ -201,7 +222,7 @@ export class DynamicMovieNetwork {
             .attr('r', d => d.depth === 0 ? 15 : 10)
             .attr('fill', d => this.colorScale(Math.min(d.depth, 3)))
             .call(this.getDragBehavior())
-            .on('click', (event, d) => this.expandNode(d))
+            .on('click', (event, d) => this.handleNodeClick(event, d))
             .on('mouseover', (event, d) => ui.showTooltip(event, d))
             .on('mouseout', () => ui.hideTooltip());
 
@@ -367,6 +388,41 @@ export class DynamicMovieNetwork {
         ui.updateStats(this.nodes, this.links);
 
         setTimeout(() => this.centerNetwork(), 1000);
+    }
+
+    async handleNodeClick(event, node) {
+        // Check if it's Ctrl+click or double-click for expansion
+        if (event.ctrlKey || event.metaKey || event.detail === 2) {
+            event.preventDefault();
+            this.expandNode(node);
+            return;
+        }
+        
+        // Single click shows movie details
+        await this.showMovieDetails(node);
+    }
+
+    async showMovieDetails(node) {
+        ui.showLoading(true);
+        
+        try {
+            // Load full details if not already loaded
+            if (!node.fullDetails) {
+                const fullDetails = await api.getFullMovieDetails(node.traktId);
+                if (fullDetails) {
+                    node.fullDetails = fullDetails;
+                    ui.updateSidebar(this.nodes);
+                }
+            }
+            
+            // Show detailed movie modal
+            ui.showMovieDetailsModal(node);
+            
+        } catch (error) {
+            ui.showNotification('Failed to load movie details', 'error');
+        } finally {
+            ui.showLoading(false);
+        }
     }
 
     async loadMovieDetails(nodeId) {

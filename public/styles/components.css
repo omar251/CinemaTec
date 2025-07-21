@@ -60,6 +60,43 @@
     font-size: 14px;
 }
 
+/* Movie Details Modal */
+.trailer-link:hover {
+    background: var(--accent-color) !important;
+    color: white !important;
+}
+
+.movie-poster img {
+    transition: transform 0.3s ease;
+}
+
+.movie-poster img:hover {
+    transform: scale(1.05);
+}
+
+.info-item {
+    padding: 8px;
+    background: var(--glass-bg);
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+.stat-item {
+    transition: transform 0.2s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+}
+
+/* Sidebar expand button */
+.expand-node:hover {
+    background: var(--accent-color) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+}
+
 /* Search Bar */
 .search-wrapper {
     position: relative;

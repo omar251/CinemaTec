@@ -55,7 +55,7 @@ router.get('/:traktId', setCacheHeaders, async (req, res) => {
   }
 });
 
-// Get movie details with full extended data
+// Get movie details with full extended data including poster
 router.get('/:traktId/full', setCacheHeaders, async (req, res) => {
   const { traktId } = req.params;
 
@@ -65,7 +65,11 @@ router.get('/:traktId/full', setCacheHeaders, async (req, res) => {
       return res.status(404).json({ error: 'Movie not found' });
     }
 
-    res.json(fullMovieData);
+    // Enhance with poster data
+    const enhanced = await enhancementService.enhanceMovieData({ movie: fullMovieData });
+    
+    // Return the enhanced movie data (flatten the structure)
+    res.json(enhanced.movie || enhanced);
   } catch (error) {
     logger.error(`Error getting full movie details: ${error.message}`, { traktId });
     res.status(500).json({ error: 'Failed to get full movie details' });
