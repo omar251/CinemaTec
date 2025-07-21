@@ -568,10 +568,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            const result = await api.saveNetworkToServer(networkData);
+            // Check if network with same name exists
+            let existingNetworks = [];
+            try {
+                existingNetworks = await api.getSavedNetworks();
+            } catch (e) {
+                console.log('Could not check existing networks');
+            }
+            
+            const existingNetwork = existingNetworks.find(net => net.name === name);
+            let result;
+            
+            if (existingNetwork) {
+                // Network exists, update it
+                console.log(`📝 Network "${name}" exists, updating...`);
+                result = await api.updateNetworkOnServer(existingNetwork.id, networkData);
+                ui.showNotification(`Network "${name}" updated successfully!`, 'success');
+            } else {
+                // New network, create it
+                console.log(`📝 Creating new network "${name}"`);
+                result = await api.saveNetworkToServer(networkData);
+                ui.showNotification(`Network "${name}" saved successfully!`, 'success');
+            }
             
             if (result.success) {
-                ui.showNotification(`Network "${name}" saved successfully!`, 'success');
                 closeSaveDialog();
                 
                 document.getElementById('networkName').value = '';

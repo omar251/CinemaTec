@@ -102,6 +102,29 @@ export async function deleteNetworkFromServer(networkId) {
     }
 }
 
+export async function updateNetworkOnServer(networkId, networkData) {
+    try {
+        const response = await fetch(`${apiBase}/networks/${networkId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(networkData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update network');
+        }
+
+        const result = await response.json();
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Update network error:', error);
+        throw error;
+    }
+}
+
 export async function exportNetwork(networkId, format) {
     try {
         const response = await fetch(`${apiBase}/networks/${networkId}/export/${format}`);
