@@ -66,14 +66,14 @@ export class DynamicMovieNetwork {
                 }
             }
 
-            if (e.target.closest('.expand-node')) {
+            if (e.target.closest('.view-details-btn')) {
                 e.stopPropagation();
-                const expandBtn = e.target.closest('.expand-node');
-                const nodeId = parseInt(expandBtn.dataset.nodeId);
+                const detailsBtn = e.target.closest('.view-details-btn');
+                const nodeId = parseInt(detailsBtn.dataset.nodeId);
                 if (nodeId !== undefined) {
                     const node = this.nodes.find(n => n.id === nodeId);
                     if (node) {
-                        this.expandNode(node);
+                        this.showMovieDetails(node);
                     }
                 }
             }

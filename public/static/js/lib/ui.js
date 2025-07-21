@@ -54,20 +54,21 @@ export function updateSidebar(nodes) {
                 </div>
                 ${genres ? `<div class="movie-genres">${genres}</div>` : ''}
                 <div class="movie-depth">Depth: ${node.depth}</div>
-                ${!node.fullDetails ? '<div class="load-details" data-node-id="' + node.id + '">📄 Load Details</div>' : ''}
-                <div class="expand-node" data-node-id="${node.id}" style="
-                    margin-top: 8px;
-                    padding: 6px 12px;
+                
+                <div class="view-details-btn" data-node-id="${node.id}" style="
+                    margin-top: 10px;
+                    padding: 8px 12px;
                     background: var(--glass-bg);
-                    border: 1px solid var(--accent-color);
+                    border: 1px solid var(--gemini-accent);
                     border-radius: 6px;
                     cursor: pointer;
                     font-size: 12px;
-                    color: var(--accent-color);
+                    color: var(--gemini-accent);
                     text-align: center;
                     transition: all 0.2s;
-                " title="Add related movies to network">
-                    🔗 Add Related Movies
+                    font-weight: 500;
+                " title="View detailed movie information">
+                    🎬 View Details
                 </div>
             </div>
         `;
@@ -137,7 +138,7 @@ function setupSidebarHoverEffects() {
 
 function handleSidebarHover(e) {
     const movieItem = e.target.closest('.movie-item');
-    if (movieItem && !e.target.closest('.expand-node, .load-details')) {
+    if (movieItem && !e.target.closest('.view-details-btn, .load-details')) {
         const nodeId = parseInt(movieItem.dataset.nodeId);
         if (nodeId !== undefined && !isNaN(nodeId)) {
             console.log('🎯 Highlighting node:', nodeId); // Debug log
