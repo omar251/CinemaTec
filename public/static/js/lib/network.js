@@ -678,80 +678,19 @@ export class DynamicMovieNetwork {
         
         let legendHTML = '';
         
-        switch (mode) {
-            case 'depth':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: #e94560;"></span> Depth 0 (Your searches)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #f6e05e;"></span> Depth 1 (Direct connections)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span> Depth 2 (Second level)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #3b82f6;"></span> Depth 3+ (Further levels)</div>
-                `;
-                break;
-                
-            case 'rating':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(2)};"></span> Poor (0-3)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(5)};"></span> Average (4-6)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(8)};"></span> Excellent (7-10)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No rating data</div>
-                `;
-                break;
-                
-            case 'genre':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Action')};"></span> Action</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Comedy')};"></span> Comedy</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Drama')};"></span> Drama</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Sci-Fi')};"></span> Sci-Fi</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Horror')};"></span> Horror</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.genre('Romance')};"></span> Romance</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No genre data</div>
-                `;
-                break;
-                
-            case 'year':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1920s')};"></span> 1920s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1930s')};"></span> 1930s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1940s')};"></span> 1940s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1950s')};"></span> 1950s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1960s')};"></span> 1960s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1970s')};"></span> 1970s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1980s')};"></span> 1980s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('1990s')};"></span> 1990s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2000s')};"></span> 2000s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2010s')};"></span> 2010s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2020s')};"></span> 2020s</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.year('2030s')};"></span> 2030s</div>
-                `;
-                break;
-                
-            case 'popularity':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(5000)};"></span> Low popularity</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(25000)};"></span> Medium popularity</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(50000)};"></span> High popularity</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(80000)};"></span> Very popular</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No popularity data</div>
-                `;
-                break;
-                
-            case 'runtime':
-                legendHTML = `
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(75)};"></span> Short (60-90 min)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(105)};"></span> Medium (90-120 min)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(135)};"></span> Long (120-150 min)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(165)};"></span> Very long (150+ min)</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No runtime data</div>
-                `;
-                break;
-        }
+        legendHTML = this.generateDynamicLegend(mode);
         
         legendContent.innerHTML = legendHTML;
         legend.style.display = 'block';
         
-        // Add click handlers to legend items for filtering
-        this.setupLegendInteractivity(mode);
+        // Add click handlers to legend items for filtering (after content is set)
+        console.log('🔧 Legend HTML generated:', legendHTML);
+        console.log('🔧 Legend content element:', legendContent);
+        
+        setTimeout(() => {
+            console.log('🔧 Setting up legend interactivity...');
+            this.setupLegendInteractivity(mode);
+        }, 100);
     }
 
     // Check data availability for color modes
@@ -850,27 +789,43 @@ export class DynamicMovieNetwork {
         if (!this.selectedFilters) this.selectedFilters = {};
         if (!this.selectedFilters[mode]) this.selectedFilters[mode] = new Set();
         
-        const legendItems = document.querySelectorAll('.legend-item');
+        // Get legend items from the specific legend content area
+        const legendContent = document.getElementById('legendContent');
+        if (!legendContent) {
+            console.log('❌ Legend content not found');
+            return;
+        }
         
-        legendItems.forEach(item => {
+        const legendItems = legendContent.querySelectorAll('.legend-item');
+        console.log(`🔧 Setting up interactivity for ${legendItems.length} legend items`);
+        
+        legendItems.forEach((item, index) => {
+            console.log(`🔍 Processing item ${index}:`, item.textContent, item);
+            
             // Skip "No data" items
             if (item.textContent.includes('No ') || item.textContent.includes('data')) {
+                console.log(`⏭️ Skipping item ${index}: ${item.textContent}`);
                 return;
             }
+            
+            console.log(`✅ Setting up item ${index}: ${item.textContent}`);
             
             // Add hover effect
             item.style.cursor = 'pointer';
             item.style.transition = 'all 0.2s ease';
             item.dataset.filterValue = item.textContent.trim();
             
-            // Add click handler for multi-selection
+            // Add click handler for multi-selection - directly to existing item
             item.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                console.log(`🖱️ Clicked legend item: ${item.textContent}`);
                 this.toggleLegendFilter(mode, item);
             });
             
             // Add hover effects (only if not selected)
-            item.addEventListener('mouseenter', () => {
+            item.addEventListener('mouseenter', (e) => {
+                console.log(`🖱️ Hovering legend item: ${item.textContent}`);
                 if (!item.classList.contains('selected')) {
                     item.style.background = 'rgba(255, 255, 255, 0.1)';
                     item.style.borderRadius = '4px';
@@ -881,7 +836,8 @@ export class DynamicMovieNetwork {
                 this.previewCombinedFilter(mode, item.textContent.trim());
             });
             
-            item.addEventListener('mouseleave', () => {
+            item.addEventListener('mouseleave', (e) => {
+                console.log(`🖱️ Left legend item: ${item.textContent}`);
                 if (!item.classList.contains('selected')) {
                     item.style.background = 'transparent';
                     item.style.padding = '0';
@@ -1027,8 +983,187 @@ export class DynamicMovieNetwork {
         ui.showNotification('All filters cleared', 'info');
     }
 
+    // Generate dynamic legend based on actual data in the network
+    generateDynamicLegend(mode) {
+        const dataAnalysis = this.analyzeNetworkData(mode);
+        let legendHTML = '';
+        
+        switch (mode) {
+            case 'depth':
+                // Show only depths that exist in the network
+                dataAnalysis.depths.forEach(depth => {
+                    const count = dataAnalysis.depthCounts[depth];
+                    const color = this.colorScales.depth(Math.min(depth, 3));
+                    const label = depth === 0 ? 'Your searches' : 
+                                 depth === 1 ? 'Direct connections' :
+                                 depth === 2 ? 'Second level' : 'Further levels';
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${color};"></span> Depth ${depth} (${count} movies) - ${label}</div>`;
+                });
+                break;
+                
+            case 'genre':
+                // Show only genres that exist in the network
+                dataAnalysis.genres.forEach(genre => {
+                    const count = dataAnalysis.genreCounts[genre];
+                    const color = this.colorScales.genre(genre);
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${color};"></span> ${genre} (${count} movies)</div>`;
+                });
+                if (dataAnalysis.missingGenres > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No genre data (${dataAnalysis.missingGenres} movies)</div>`;
+                }
+                break;
+                
+            case 'year':
+                // Show only decades that exist in the network
+                dataAnalysis.decades.forEach(decade => {
+                    const count = dataAnalysis.decadeCounts[decade];
+                    const color = this.colorScales.year(decade);
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${color};"></span> ${decade} (${count} movies)</div>`;
+                });
+                break;
+                
+            case 'rating':
+                // Show rating ranges based on actual data
+                if (dataAnalysis.ratingRanges.poor > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(2)};"></span> Poor (0-3) - ${dataAnalysis.ratingRanges.poor} movies</div>`;
+                }
+                if (dataAnalysis.ratingRanges.average > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(5)};"></span> Average (4-6) - ${dataAnalysis.ratingRanges.average} movies</div>`;
+                }
+                if (dataAnalysis.ratingRanges.excellent > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(8)};"></span> Excellent (7-10) - ${dataAnalysis.ratingRanges.excellent} movies</div>`;
+                }
+                if (dataAnalysis.missingRatings > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No rating data (${dataAnalysis.missingRatings} movies)</div>`;
+                }
+                break;
+                
+            case 'popularity':
+                // Show popularity ranges based on actual data
+                if (dataAnalysis.popularityRanges.low > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(5000)};"></span> Low popularity - ${dataAnalysis.popularityRanges.low} movies</div>`;
+                }
+                if (dataAnalysis.popularityRanges.medium > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(25000)};"></span> Medium popularity - ${dataAnalysis.popularityRanges.medium} movies</div>`;
+                }
+                if (dataAnalysis.popularityRanges.high > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(50000)};"></span> High popularity - ${dataAnalysis.popularityRanges.high} movies</div>`;
+                }
+                if (dataAnalysis.popularityRanges.very_popular > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.popularity(80000)};"></span> Very popular - ${dataAnalysis.popularityRanges.very_popular} movies</div>`;
+                }
+                if (dataAnalysis.missingPopularity > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No popularity data (${dataAnalysis.missingPopularity} movies)</div>`;
+                }
+                break;
+                
+            case 'runtime':
+                // Show runtime ranges based on actual data
+                if (dataAnalysis.runtimeRanges.short > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(75)};"></span> Short (60-90 min) - ${dataAnalysis.runtimeRanges.short} movies</div>`;
+                }
+                if (dataAnalysis.runtimeRanges.medium > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(105)};"></span> Medium (90-120 min) - ${dataAnalysis.runtimeRanges.medium} movies</div>`;
+                }
+                if (dataAnalysis.runtimeRanges.long > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(135)};"></span> Long (120-150 min) - ${dataAnalysis.runtimeRanges.long} movies</div>`;
+                }
+                if (dataAnalysis.runtimeRanges.very_long > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.runtime(165)};"></span> Very long (150+ min) - ${dataAnalysis.runtimeRanges.very_long} movies</div>`;
+                }
+                if (dataAnalysis.missingRuntime > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No runtime data (${dataAnalysis.missingRuntime} movies)</div>`;
+                }
+                break;
+        }
+        
+        return legendHTML;
+    }
+
+    // Analyze network data to determine what legend items to show
+    analyzeNetworkData(mode) {
+        const analysis = {
+            depths: new Set(),
+            depthCounts: {},
+            genres: new Set(),
+            genreCounts: {},
+            decades: new Set(),
+            decadeCounts: {},
+            ratingRanges: { poor: 0, average: 0, excellent: 0 },
+            popularityRanges: { low: 0, medium: 0, high: 0, very_popular: 0 },
+            runtimeRanges: { short: 0, medium: 0, long: 0, very_long: 0 },
+            missingGenres: 0,
+            missingRatings: 0,
+            missingPopularity: 0,
+            missingRuntime: 0
+        };
+        
+        this.nodes.forEach(node => {
+            const details = node.fullDetails || node.basicDetails || {};
+            
+            // Analyze depth
+            analysis.depths.add(node.depth);
+            analysis.depthCounts[node.depth] = (analysis.depthCounts[node.depth] || 0) + 1;
+            
+            // Analyze genres
+            if (details.genres?.length) {
+                const rawGenre = details.genres[0];
+                const primaryGenre = rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+                analysis.genres.add(primaryGenre);
+                analysis.genreCounts[primaryGenre] = (analysis.genreCounts[primaryGenre] || 0) + 1;
+            } else {
+                analysis.missingGenres++;
+            }
+            
+            // Analyze decades
+            const decade = this.getDecade(node.year);
+            analysis.decades.add(decade);
+            analysis.decadeCounts[decade] = (analysis.decadeCounts[decade] || 0) + 1;
+            
+            // Analyze ratings
+            if (details.rating) {
+                if (details.rating <= 3) analysis.ratingRanges.poor++;
+                else if (details.rating <= 6) analysis.ratingRanges.average++;
+                else analysis.ratingRanges.excellent++;
+            } else {
+                analysis.missingRatings++;
+            }
+            
+            // Analyze popularity
+            if (details.stats?.watchers) {
+                const watchers = details.stats.watchers;
+                if (watchers < 15000) analysis.popularityRanges.low++;
+                else if (watchers < 40000) analysis.popularityRanges.medium++;
+                else if (watchers < 70000) analysis.popularityRanges.high++;
+                else analysis.popularityRanges.very_popular++;
+            } else {
+                analysis.missingPopularity++;
+            }
+            
+            // Analyze runtime
+            if (details.runtime) {
+                const runtime = details.runtime;
+                if (runtime < 90) analysis.runtimeRanges.short++;
+                else if (runtime < 120) analysis.runtimeRanges.medium++;
+                else if (runtime < 150) analysis.runtimeRanges.long++;
+                else analysis.runtimeRanges.very_long++;
+            } else {
+                analysis.missingRuntime++;
+            }
+        });
+        
+        // Convert sets to sorted arrays
+        analysis.depths = Array.from(analysis.depths).sort((a, b) => a - b);
+        analysis.genres = Array.from(analysis.genres).sort();
+        analysis.decades = Array.from(analysis.decades).sort();
+        
+        return analysis;
+    }
+
     // Extract filter value from legend text
     extractFilterValue(mode, legendText) {
+        console.log(`🔍 Extracting filter value for mode "${mode}" from text: "${legendText}"`);
+        
         switch (mode) {
             case 'depth':
                 if (legendText.includes('Depth 0')) return 0;
@@ -1038,10 +1173,18 @@ export class DynamicMovieNetwork {
                 break;
                 
             case 'genre':
-                return legendText; // Genre name directly
+                // Extract genre name from "Drama (27 movies)" format
+                const genreMatch = legendText.match(/^([A-Za-z-]+)/);
+                const genre = genreMatch ? genreMatch[1].trim() : legendText;
+                console.log(`🎭 Extracted genre: "${genre}" from "${legendText}"`);
+                return genre;
                 
             case 'year':
-                return legendText; // Decade directly (e.g., "1990s")
+                // Extract decade from "1990s (12 movies)" format
+                const yearMatch = legendText.match(/^(\d{4}s)/);
+                const decade = yearMatch ? yearMatch[1] : legendText;
+                console.log(`📅 Extracted decade: "${decade}" from "${legendText}"`);
+                return decade;
                 
             case 'rating':
                 if (legendText.includes('Poor')) return 'poor';
@@ -1052,7 +1195,7 @@ export class DynamicMovieNetwork {
             case 'popularity':
                 if (legendText.includes('Low')) return 'low';
                 if (legendText.includes('Medium')) return 'medium';
-                if (legendText.includes('High')) return 'high';
+                if (legendText.includes('High') && !legendText.includes('Very')) return 'high';
                 if (legendText.includes('Very popular')) return 'very_popular';
                 break;
                 
@@ -1063,6 +1206,8 @@ export class DynamicMovieNetwork {
                 if (legendText.includes('Very long')) return 'very_long';
                 break;
         }
+        
+        console.log(`❌ No filter value extracted for "${legendText}"`);
         return null;
     }
 
