@@ -88,9 +88,11 @@ python -m http.server 8080
 |---------|-------------|
 | `npm start` | Start the production server |
 | `npm run dev` | Start with auto-reload (requires nodemon) |
+| `npm run setup` | Install dependencies and show setup instructions |
+| `npm run quick-start` | Smart startup with environment checks |
 | `npm test` | Run performance tests |
 | `npm run test-migration` | Test migration from Python |
-| `npm run quick-start` | Smart startup with checks |
+| `npm run generate-network` | Generate movie network visualizations |
 
 ## Project Structure
 
