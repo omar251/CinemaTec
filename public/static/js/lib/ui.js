@@ -78,17 +78,22 @@ export function showTooltip(event, d) {
     const certification = details.certification ? `🎬 ${details.certification}` : '';
     const genres = details.genres ? `🎭 ${details.genres.slice(0, 3).join(', ')}` : '';
     const watchers = details.stats?.watchers ? `👥 ${details.stats.watchers.toLocaleString()} watchers` : '';
+    const overview = details.overview ? details.overview.substring(0, 150) + (details.overview.length > 150 ? '...' : '') : '';
     
     tooltip.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 8px; color: #f6e05e;">
+        <div style="font-weight: bold; margin-bottom: 8px; color: #f6e05e; font-size: 14px;">
             ${d.title} (${d.year})
         </div>
-        ${rating ? `<div style="margin-bottom: 4px;">${rating} ${votes}</div>` : ''}
-        ${runtime || certification ? `<div style="margin-bottom: 4px;">${runtime} ${certification}</div>` : ''}
-        ${genres ? `<div style="margin-bottom: 4px;">${genres}</div>` : ''}
-        ${watchers ? `<div style="margin-bottom: 4px;">${watchers}</div>` : ''}
-        <div style="margin-top: 8px; font-size: 11px; color: #b0b0b0;">
-            Depth: ${d.depth} • Click to expand
+        ${rating ? `<div style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">${rating} ${votes}</div>` : ''}
+        ${runtime || certification ? `<div style="margin-bottom: 4px; font-size: 12px;">${runtime} ${certification}</div>` : ''}
+        ${genres ? `<div style="margin-bottom: 6px; font-size: 12px;">${genres}</div>` : ''}
+        ${watchers ? `<div style="margin-bottom: 6px; font-size: 12px;">${watchers}</div>` : ''}
+        ${overview ? `<div style="margin-bottom: 8px; font-size: 11px; color: #d0d0d0; line-height: 1.3; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">${overview}</div>` : ''}
+        <div style="margin-top: 8px; font-size: 11px; color: #b0b0b0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Depth: ${d.depth}</span>
+                <span style="color: #f6e05e;">Click to expand</span>
+            </div>
         </div>
     `;
 }

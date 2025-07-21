@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Movie Network Explorer</title>
+    <title>Enhanced Movie Network Explorer - AI-Powered</title>
+    <meta name="description" content="Explore movie connections with AI insights, enhanced search, and interactive network visualization">
+    <meta name="keywords" content="movies, network, visualization, AI, Trakt, TMDB, Gemini">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         :root {
@@ -56,6 +58,12 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+        
+        .header h1::after {
+            content: " ✨";
+            font-size: 0.8em;
+            opacity: 0.8;
         }
 
         .search-container {
@@ -630,7 +638,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🎬 Dynamic Movie Network</h1>
+        <h1>🎬 Enhanced Movie Network Explorer</h1>
         <div class="search-container">
             <input type="text" class="search-input" id="movieSearch" placeholder="Search for a movie to add to network..." />
             <button class="search-btn" id="searchBtn">🔍 Add</button>
@@ -726,7 +734,10 @@
     </div>
 
 
+    <!-- D3.js for network visualization -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Enhanced Movie Network Explorer - All features integrated -->
     <script type="module" src="static/js/app.js"></script>
 </body>
 </html>
