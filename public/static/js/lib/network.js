@@ -749,6 +749,9 @@ export class DynamicMovieNetwork {
         
         legendContent.innerHTML = legendHTML;
         legend.style.display = 'block';
+        
+        // Add click handlers to legend items for filtering
+        this.setupLegendInteractivity(mode);
     }
 
     // Check data availability for color modes
@@ -838,6 +841,310 @@ export class DynamicMovieNetwork {
             } finally {
                 ui.showLoading(false);
             }
+        }
+    }
+
+    // Setup interactive legend for filtering
+    setupLegendInteractivity(mode) {
+        // Initialize selected filters for this mode
+        if (!this.selectedFilters) this.selectedFilters = {};
+        if (!this.selectedFilters[mode]) this.selectedFilters[mode] = new Set();
+        
+        const legendItems = document.querySelectorAll('.legend-item');
+        
+        legendItems.forEach(item => {
+            // Skip "No data" items
+            if (item.textContent.includes('No ') || item.textContent.includes('data')) {
+                return;
+            }
+            
+            // Add hover effect
+            item.style.cursor = 'pointer';
+            item.style.transition = 'all 0.2s ease';
+            item.dataset.filterValue = item.textContent.trim();
+            
+            // Add click handler for multi-selection
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleLegendFilter(mode, item);
+            });
+            
+            // Add hover effects (only if not selected)
+            item.addEventListener('mouseenter', () => {
+                if (!item.classList.contains('selected')) {
+                    item.style.background = 'rgba(255, 255, 255, 0.1)';
+                    item.style.borderRadius = '4px';
+                    item.style.padding = '2px 4px';
+                }
+                
+                // Preview combined filter
+                this.previewCombinedFilter(mode, item.textContent.trim());
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                if (!item.classList.contains('selected')) {
+                    item.style.background = 'transparent';
+                    item.style.padding = '0';
+                }
+                
+                // Show current selection or clear
+                if (this.selectedFilters[mode].size > 0) {
+                    this.applyCombinedFilter(mode);
+                } else {
+                    this.clearHighlight();
+                }
+            });
+        });
+        
+        // Add clear all button
+        this.addClearAllButton(mode);
+    }
+
+    // Toggle legend filter selection
+    toggleLegendFilter(mode, item) {
+        const filterValue = item.dataset.filterValue;
+        
+        if (this.selectedFilters[mode].has(filterValue)) {
+            // Deselect
+            this.selectedFilters[mode].delete(filterValue);
+            item.classList.remove('selected');
+            item.style.background = 'transparent';
+            item.style.border = 'none';
+            item.style.padding = '0';
+        } else {
+            // Select
+            this.selectedFilters[mode].add(filterValue);
+            item.classList.add('selected');
+            item.style.background = 'rgba(233, 69, 96, 0.2)';
+            item.style.border = '1px solid var(--accent-color)';
+            item.style.borderRadius = '4px';
+            item.style.padding = '2px 4px';
+        }
+        
+        // Apply combined filter
+        this.applyCombinedFilter(mode);
+    }
+
+    // Apply combined filter from all selected items
+    applyCombinedFilter(mode) {
+        if (this.selectedFilters[mode].size === 0) {
+            this.clearHighlight();
+            ui.showNotification('All filters cleared', 'info');
+            return;
+        }
+        
+        // Find nodes matching ANY of the selected criteria (OR logic)
+        const matchingNodes = this.nodes.filter(node => {
+            return Array.from(this.selectedFilters[mode]).some(legendText => {
+                const filterValue = this.extractFilterValue(mode, legendText);
+                return this.nodeMatchesFilter(node, mode, filterValue, legendText);
+            });
+        });
+        
+        console.log(`🔍 Combined filter: ${matchingNodes.length} nodes match ${this.selectedFilters[mode].size} criteria`);
+        
+        // Highlight matching nodes
+        this.highlightFilteredNodes(matchingNodes);
+        
+        // Show notification
+        const selectedItems = Array.from(this.selectedFilters[mode]).join(', ');
+        ui.showNotification(`Filtered: ${matchingNodes.length} movies (${selectedItems})`, 'info');
+    }
+
+    // Preview combined filter including hovered item
+    previewCombinedFilter(mode, hoveredText) {
+        const previewFilters = new Set(this.selectedFilters[mode]);
+        previewFilters.add(hoveredText);
+        
+        const matchingNodes = this.nodes.filter(node => {
+            return Array.from(previewFilters).some(legendText => {
+                const filterValue = this.extractFilterValue(mode, legendText);
+                return this.nodeMatchesFilter(node, mode, filterValue, legendText);
+            });
+        });
+        
+        this.highlightFilteredNodes(matchingNodes);
+    }
+
+    // Add clear all button to legend
+    addClearAllButton(mode) {
+        const legendContent = document.getElementById('legendContent');
+        if (!legendContent) return;
+        
+        // Remove existing clear button
+        const existingClear = legendContent.querySelector('.clear-filters-btn');
+        if (existingClear) existingClear.remove();
+        
+        // Add clear all button
+        const clearBtn = document.createElement('div');
+        clearBtn.className = 'clear-filters-btn';
+        clearBtn.innerHTML = '🗑️ Clear All Filters';
+        clearBtn.style.cssText = `
+            margin-top: 10px;
+            padding: 6px 8px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        `;
+        
+        clearBtn.addEventListener('click', () => {
+            this.clearAllFilters(mode);
+        });
+        
+        clearBtn.addEventListener('mouseenter', () => {
+            clearBtn.style.background = 'rgba(233, 69, 96, 0.1)';
+            clearBtn.style.borderColor = 'var(--accent-color)';
+            clearBtn.style.color = 'var(--accent-color)';
+        });
+        
+        clearBtn.addEventListener('mouseleave', () => {
+            clearBtn.style.background = 'var(--glass-bg)';
+            clearBtn.style.borderColor = 'var(--glass-border)';
+            clearBtn.style.color = 'var(--text-secondary)';
+        });
+        
+        legendContent.appendChild(clearBtn);
+    }
+
+    // Clear all filters for current mode
+    clearAllFilters(mode) {
+        this.selectedFilters[mode].clear();
+        
+        // Remove selected styling from all items
+        document.querySelectorAll('.legend-item.selected').forEach(item => {
+            item.classList.remove('selected');
+            item.style.background = 'transparent';
+            item.style.border = 'none';
+            item.style.padding = '0';
+        });
+        
+        this.clearHighlight();
+        ui.showNotification('All filters cleared', 'info');
+    }
+
+    // Extract filter value from legend text
+    extractFilterValue(mode, legendText) {
+        switch (mode) {
+            case 'depth':
+                if (legendText.includes('Depth 0')) return 0;
+                if (legendText.includes('Depth 1')) return 1;
+                if (legendText.includes('Depth 2')) return 2;
+                if (legendText.includes('Depth 3')) return 3;
+                break;
+                
+            case 'genre':
+                return legendText; // Genre name directly
+                
+            case 'year':
+                return legendText; // Decade directly (e.g., "1990s")
+                
+            case 'rating':
+                if (legendText.includes('Poor')) return 'poor';
+                if (legendText.includes('Average')) return 'average';
+                if (legendText.includes('Excellent')) return 'excellent';
+                break;
+                
+            case 'popularity':
+                if (legendText.includes('Low')) return 'low';
+                if (legendText.includes('Medium')) return 'medium';
+                if (legendText.includes('High')) return 'high';
+                if (legendText.includes('Very popular')) return 'very_popular';
+                break;
+                
+            case 'runtime':
+                if (legendText.includes('Short')) return 'short';
+                if (legendText.includes('Medium')) return 'medium';
+                if (legendText.includes('Long') && !legendText.includes('Very')) return 'long';
+                if (legendText.includes('Very long')) return 'very_long';
+                break;
+        }
+        return null;
+    }
+
+    // Check if node matches filter criteria
+    nodeMatchesFilter(node, mode, filterValue, legendText) {
+        const details = node.fullDetails || node.basicDetails || {};
+        
+        switch (mode) {
+            case 'depth':
+                return node.depth === filterValue || (filterValue === 3 && node.depth >= 3);
+                
+            case 'genre':
+                const rawGenre = details.genres?.[0] || 'Unknown';
+                const primaryGenre = rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+                return primaryGenre === filterValue;
+                
+            case 'year':
+                const decade = this.getDecade(node.year);
+                return decade === filterValue;
+                
+            case 'rating':
+                const rating = details.rating;
+                if (!rating) return false;
+                
+                switch (filterValue) {
+                    case 'poor': return rating <= 3;
+                    case 'average': return rating > 3 && rating <= 6;
+                    case 'excellent': return rating > 6;
+                }
+                break;
+                
+            case 'popularity':
+                const watchers = details.stats?.watchers;
+                if (!watchers) return false;
+                
+                switch (filterValue) {
+                    case 'low': return watchers < 15000;
+                    case 'medium': return watchers >= 15000 && watchers < 40000;
+                    case 'high': return watchers >= 40000 && watchers < 70000;
+                    case 'very_popular': return watchers >= 70000;
+                }
+                break;
+                
+            case 'runtime':
+                const runtime = details.runtime;
+                if (!runtime) return false;
+                
+                switch (filterValue) {
+                    case 'short': return runtime < 90;
+                    case 'medium': return runtime >= 90 && runtime < 120;
+                    case 'long': return runtime >= 120 && runtime < 150;
+                    case 'very_long': return runtime >= 150;
+                }
+                break;
+        }
+        return false;
+    }
+
+    // Highlight filtered nodes
+    highlightFilteredNodes(matchingNodes) {
+        const matchingIds = new Set(matchingNodes.map(n => n.id));
+        
+        this.svg.selectAll('.node')
+            .classed('highlighted', d => matchingIds.has(d.id))
+            .classed('dimmed', d => !matchingIds.has(d.id));
+
+        this.svg.selectAll('.link')
+            .classed('highlighted', d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return matchingIds.has(sourceId) && matchingIds.has(targetId);
+            })
+            .classed('dimmed', d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return !matchingIds.has(sourceId) || !matchingIds.has(targetId);
+            });
+
+        if (this.showLabels) {
+            this.svg.selectAll('.node-label')
+                .classed('highlighted', d => matchingIds.has(d.id))
+                .classed('dimmed', d => !matchingIds.has(d.id));
         }
     }
 }
