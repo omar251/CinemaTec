@@ -74,8 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         document.getElementById('closeSaveBtn').addEventListener('click', closeSaveDialog);
+        document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveDialog);
         document.getElementById('confirmSaveBtn').addEventListener('click', saveNetwork);
         document.getElementById('closeLoadBtn').addEventListener('click', closeLoadDialog);
+        document.getElementById('cancelLoadBtn').addEventListener('click', closeLoadDialog);
         document.getElementById('refreshNetworksBtn').addEventListener('click', refreshNetworksList);
 
         window.addEventListener('click', (event) => {
