@@ -112,7 +112,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.addEventListener('click', (e) => {
-            if (e.target.closest('.saved-network-item') && !e.target.closest('.action-btn')) {
+            // Handle expand/collapse button
+            if (e.target.closest('.expand-btn')) {
+                e.stopPropagation();
+                const expandBtn = e.target.closest('.expand-btn');
+                const networkId = expandBtn.dataset.networkId;
+                toggleNetworkExpansion(networkId);
+                return;
+            }
+
+            // Handle delete button
+            if (e.target.closest('.delete-btn')) {
+                e.stopPropagation();
+                const deleteBtn = e.target.closest('.delete-btn');
+                const networkId = deleteBtn.dataset.networkId;
+                deleteNetwork(networkId);
+                return;
+            }
+
+            // Handle network item selection (only if not clicking on buttons)
+            if (e.target.closest('.saved-network-item') && 
+                !e.target.closest('.action-btn') && 
+                !e.target.closest('.expand-btn') && 
+                !e.target.closest('.delete-btn')) {
                 const networkItem = e.target.closest('.saved-network-item');
                 const networkId = networkItem.dataset.networkId;
                 if (networkId) {
@@ -120,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Handle action buttons
             if (e.target.closest('.action-btn')) {
                 e.stopPropagation();
                 const actionBtn = e.target.closest('.action-btn');
@@ -131,8 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (action === 'export' && networkId) {
                     const format = actionBtn.dataset.format || 'json';
                     exportNetwork(networkId, format);
-                } else if (action === 'delete' && networkId) {
-                    deleteNetwork(networkId);
+                } else if (action === 'preview' && networkId) {
+                    previewNetwork(networkId);
                 }
             }
         });
@@ -258,20 +281,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <div class="saved-network-item" data-network-id="${net.id}">
                         <div class="network-item-header">
-                            <div class="network-item-title">${net.name}</div>
+                            <div class="network-item-title-row">
+                                <button class="expand-btn" data-network-id="${net.id}" title="Expand/Collapse Details">
+                                    <span class="expand-icon">▶</span>
+                                </button>
+                                <div class="network-item-title">${net.name}</div>
+                                <button class="delete-btn" data-action="delete" data-network-id="${net.id}" title="Delete Network">
+                                    🗑️
+                                </button>
+                            </div>
                             <div class="network-item-date">${createdDate} ${createdTime}</div>
                         </div>
-                        ${net.description ? `<div class="network-item-description">${net.description}</div>` : ''}
-                        <div class="network-item-stats">
-                            <span>🎬 ${net.metadata.totalMovies} movies</span>
-                            <span>🔗 ${net.metadata.totalConnections} connections</span>
-                            <span>⭐ ${net.metadata.averageRating || 'N/A'}</span>
-                            <span>📊 Depth ${net.metadata.maxDepth}</span>
-                        </div>
-                        <div class.network-item-actions">
-                            <button class="action-btn" data-action="load" data-network-id="${net.id}">📂 Load</button>
-                            <button class="action-btn" data-action="export" data-network-id="${net.id}" data-format="json">📤 Export</button>
-                            <button class="action-btn danger" data-action="delete" data-network-id="${net.id}">🗑️ Delete</button>
+                        <div class="network-item-content" style="display: none;">
+                            ${net.description ? `<div class="network-item-description">${net.description}</div>` : ''}
+                            <div class="network-item-stats">
+                                <span>🎬 ${net.metadata.totalMovies} movies</span>
+                                <span>🔗 ${net.metadata.totalConnections} connections</span>
+                                <span>⭐ ${net.metadata.averageRating || 'N/A'}</span>
+                                <span>📊 Depth ${net.metadata.maxDepth}</span>
+                                ${net.metadata.genres ? `<span>🎭 ${net.metadata.genres.length} genres</span>` : ''}
+                            </div>
+                            <div class="network-item-actions">
+                                <button class="action-btn" data-action="load" data-network-id="${net.id}">📂 Load</button>
+                                <button class="action-btn" data-action="export" data-network-id="${net.id}" data-format="json">📤 Export</button>
+                                <button class="action-btn" data-action="preview" data-network-id="${net.id}">👁️ Preview</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -336,6 +370,124 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             ui.showNotification('Failed to export network', 'error');
         }
+    }
+
+    function toggleNetworkExpansion(networkId) {
+        const networkItem = document.querySelector(`[data-network-id="${networkId}"]`);
+        if (!networkItem) return;
+
+        const content = networkItem.querySelector('.network-item-content');
+        const expandIcon = networkItem.querySelector('.expand-icon');
+        
+        if (content.style.display === 'none') {
+            // Expand
+            content.style.display = 'block';
+            expandIcon.textContent = '▼';
+            networkItem.classList.add('expanded');
+        } else {
+            // Collapse
+            content.style.display = 'none';
+            expandIcon.textContent = '▶';
+            networkItem.classList.remove('expanded');
+        }
+    }
+
+    async function previewNetwork(networkId) {
+        try {
+            const networkData = await api.loadNetworkFromServer(networkId);
+            showNetworkPreview(networkData);
+        } catch (error) {
+            ui.showNotification('Failed to load network preview', 'error');
+        }
+    }
+
+    function showNetworkPreview(networkData) {
+        // Create preview modal if it doesn't exist
+        let modal = document.getElementById('networkPreviewModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'networkPreviewModal';
+            modal.className = 'modal';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>📊 Network Preview</h3>
+                        <button class="close-btn" id="closePreviewBtn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="previewContent"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="control-btn" id="loadFromPreviewBtn">📂 Load Network</button>
+                        <button class="control-btn" id="closePreviewFooterBtn">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Generate preview content
+        const topMovies = networkData.nodes
+            .filter(node => node.fullDetails?.rating)
+            .sort((a, b) => (b.fullDetails.rating || 0) - (a.fullDetails.rating || 0))
+            .slice(0, 5);
+
+        const genres = [...new Set(networkData.nodes.flatMap(node => 
+            node.fullDetails?.genres || node.basicDetails?.genres || []
+        ))];
+
+        document.getElementById('previewContent').innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: var(--gemini-accent); margin-bottom: 10px;">${networkData.name}</h4>
+                ${networkData.description ? `<p style="color: var(--text-secondary); margin-bottom: 15px;">${networkData.description}</p>` : ''}
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div><strong>🎬 Movies:</strong> ${networkData.metadata?.totalMovies || networkData.nodes.length}</div>
+                    <div><strong>🔗 Connections:</strong> ${networkData.metadata?.totalConnections || networkData.links?.length || 0}</div>
+                    <div><strong>📊 Max Depth:</strong> ${networkData.metadata?.maxDepth || Math.max(...networkData.nodes.map(n => n.depth || 0))}</div>
+                    <div><strong>⭐ Avg Rating:</strong> ${networkData.metadata?.averageRating || 'N/A'}</div>
+                </div>
+
+                ${topMovies.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: var(--accent-color); margin-bottom: 10px;">🏆 Top Rated Movies</h5>
+                        <div style="max-height: 150px; overflow-y: auto;">
+                            ${topMovies.map(movie => `
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--glass-border);">
+                                    <span>${movie.title} (${movie.year})</span>
+                                    <span style="color: var(--gemini-accent);">⭐ ${movie.fullDetails.rating.toFixed(1)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${genres.length > 0 ? `
+                    <div>
+                        <h5 style="color: var(--accent-color); margin-bottom: 10px;">🎭 Genres (${genres.length})</h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            ${genres.slice(0, 10).map(genre => 
+                                `<span style="background: var(--glass-bg); padding: 3px 8px; border-radius: 10px; font-size: 12px;">${genre}</span>`
+                            ).join('')}
+                            ${genres.length > 10 ? `<span style="color: var(--text-secondary); font-size: 12px;">+${genres.length - 10} more</span>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+        
+        // Add event listeners
+        document.getElementById('closePreviewBtn').onclick = () => modal.style.display = 'none';
+        document.getElementById('closePreviewFooterBtn').onclick = () => modal.style.display = 'none';
+        document.getElementById('loadFromPreviewBtn').onclick = () => {
+            modal.style.display = 'none';
+            network.loadNetworkData(networkData);
+            ui.showNotification(`Network "${networkData.name}" loaded successfully!`, 'success');
+            closeLoadDialog();
+        };
     }
 
     // Enhanced search functions
