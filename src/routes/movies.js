@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const traktService = require('../services/traktService');
 const enhancementService = require('../services/enhancementService');
+const movieDataService = require('../services/movieDataService');
 const logger = require('../utils/logger');
 
 // Cache middleware for HTTP responses
@@ -76,7 +77,7 @@ router.get('/:traktId/full', setCacheHeaders, async (req, res) => {
   }
 });
 
-// Get related movies with enhancement
+// Get related movies with cache-first enhancement
 router.get('/:traktId/related', setCacheHeaders, async (req, res) => {
   const startTime = Date.now();
   const { traktId } = req.params;
@@ -88,25 +89,48 @@ router.get('/:traktId/related', setCacheHeaders, async (req, res) => {
     }
 
     // Limit to 8 movies for better performance
-    const moviesToEnhance = relatedMovies.slice(0, 8);
+    const moviesToProcess = relatedMovies.slice(0, 8);
+    
+    // Check cache for each movie first
+    const cachedMovies = [];
+    const uncachedMovies = [];
+    
+    for (const movie of moviesToProcess) {
+      const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+      if (cachedMovie) {
+        // Use cached enhanced version
+        cachedMovies.push({ movie: cachedMovie });
+        logger.debug(`Using cached movie: ${movie.title} (${movie.year})`);
+      } else {
+        // Need to enhance this movie
+        uncachedMovies.push(movie);
+      }
+    }
 
-    // Enhance movies concurrently
-    const enhancedMovies = await enhancementService.enhanceMovieList(
-      moviesToEnhance,
-      { maxConcurrent: 4, includeStats: false }
-    );
+    // Enhance uncached movies if any
+    let enhancedUncached = [];
+    if (uncachedMovies.length > 0) {
+      logger.info(`Enhancing ${uncachedMovies.length} uncached related movies`);
+      enhancedUncached = await enhancementService.enhanceMovieList(
+        uncachedMovies,
+        { maxConcurrent: 4, includeStats: false }
+      );
+    }
+
+    // Combine cached and newly enhanced movies
+    const allEnhancedMovies = [...cachedMovies, ...enhancedUncached];
 
     const duration = Date.now() - startTime;
-    logger.info(`Related movies enhanced in ${duration}ms for movie: ${traktId}`);
+    logger.info(`Related movies processed in ${duration}ms for movie: ${traktId} (${cachedMovies.length} from cache, ${enhancedUncached.length} enhanced)`);
 
-    res.json(enhancedMovies);
+    res.json(allEnhancedMovies);
   } catch (error) {
     logger.error(`Error getting related movies: ${error.message}`, { traktId });
     res.status(500).json({ error: 'Failed to get related movies' });
   }
 });
 
-// Get related movies without enhancement (fast)
+// Get related movies with cache-first approach (fast but enhanced when cached)
 router.get('/:traktId/related/fast', setCacheHeaders, async (req, res) => {
   const { traktId } = req.params;
 
@@ -116,8 +140,26 @@ router.get('/:traktId/related/fast', setCacheHeaders, async (req, res) => {
       return res.json([]);
     }
 
-    // Return first 10 without enhancement
-    res.json(relatedMovies.slice(0, 10));
+    // Limit to 10 movies for fast response
+    const moviesToProcess = relatedMovies.slice(0, 10);
+    
+    // Check cache for enhanced versions
+    const result = [];
+    
+    for (const movie of moviesToProcess) {
+      const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+      if (cachedMovie) {
+        // Use cached enhanced version with full details
+        result.push(cachedMovie);
+        logger.debug(`Fast endpoint using cached movie: ${movie.title} (${movie.year})`);
+      } else {
+        // Use basic API data for uncached movies
+        result.push(movie);
+      }
+    }
+
+    logger.info(`Fast related movies for ${traktId}: ${result.filter(m => m.rating || m.stats).length}/${result.length} from cache`);
+    res.json(result);
   } catch (error) {
     logger.error(`Error getting related movies (fast): ${error.message}`, { traktId });
     res.status(500).json({ error: 'Failed to get related movies' });
