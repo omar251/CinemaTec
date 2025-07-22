@@ -10,6 +10,7 @@ const apiRoutes = require('./routes');
 
 // Initialize services (this triggers their setup)
 require('./services/cacheService');
+require('./services/movieDataService');
 require('./services/traktService');
 require('./services/tmdbService');
 require('./services/aiService');
@@ -120,6 +121,10 @@ function setupGracefulShutdown(server) {
     logger.info(`📡 Received ${signal}, shutting down gracefully...`);
     
     try {
+      // Shutdown movie data service to save any pending data
+      const movieDataService = require('./services/movieDataService');
+      await movieDataService.shutdown();
+      
       await server.stop();
       process.exit(0);
     } catch (error) {

@@ -48,7 +48,13 @@ const config = {
   // Storage configuration
   storage: {
     type: 'file',
-    dataDir: 'saved_networks'
+    dataDir: 'saved_networks',
+    movieCache: {
+      enabled: true,
+      autoSaveInterval: 300000, // 5 minutes
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      cleanupInterval: 24 * 60 * 60 * 1000 // 24 hours
+    }
   },
 
   // Security configuration

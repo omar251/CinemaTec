@@ -10,12 +10,14 @@ const searchRoutes = require('./search');
 const networksRoutes = require('./networks');
 const aiRoutes = require('./ai');
 const healthRoutes = require('./health');
+const cacheRoutes = require('./cache');
 
 // Mount routes
 router.use('/search', searchRoutes);
 router.use('/movies', moviesRoutes);
 router.use('/networks', networksRoutes);
 router.use('/ai', aiRoutes);
+router.use('/cache', cacheRoutes);
 router.use('/health', healthRoutes);
 
 // Root API endpoint
@@ -27,7 +29,8 @@ router.get('/', (req, res) => {
       health: '/api/health',
       movies: '/api/movies',
       networks: '/api/networks',
-      ai: '/api/ai'
+      ai: '/api/ai',
+      cache: '/api/cache'
     },
     documentation: 'See /docs/api/ for detailed API documentation'
   });

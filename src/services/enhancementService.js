@@ -5,6 +5,7 @@
 const traktService = require('./traktService');
 const tmdbService = require('./tmdbService');
 const cacheService = require('./cacheService');
+const movieDataService = require('./movieDataService');
 const logger = require('../utils/logger');
 
 class EnhancementService {
@@ -18,10 +19,23 @@ class EnhancementService {
     const movie = movieItem.movie;
     const cacheKey = `enhanced:${movie.ids.trakt}`;
 
-    // Check cache first
+    // Check memory cache first
     const cached = cacheService.getEnhancedCache(cacheKey);
     if (cached) {
       return cached;
+    }
+
+    // Check persistent movie data cache
+    const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+    if (cachedMovie) {
+      const enhancedFromCache = {
+        ...movieItem,
+        movie: cachedMovie
+      };
+      // Store in memory cache for faster access
+      cacheService.setEnhancedCache(cacheKey, enhancedFromCache);
+      logger.debug(`Movie loaded from persistent cache: ${movie.title}`);
+      return enhancedFromCache;
     }
 
     try {
@@ -46,8 +60,12 @@ class EnhancementService {
         }
       };
 
-      // Cache the enhanced data
+      // Cache the enhanced data in memory
       cacheService.setEnhancedCache(cacheKey, enhanced);
+      
+      // Store in persistent movie data cache
+      movieDataService.storeMovie(enhanced.movie);
+      
       logger.debug(`Movie enhanced successfully: ${movie.title}`);
 
       return enhanced;
