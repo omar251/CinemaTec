@@ -62,20 +62,36 @@ function renderSidebarMovies(nodes) {
                 ${genres ? `<div class="movie-genres">${genres}</div>` : ''}
                 <div class="movie-depth">Depth: ${node.depth}</div>
                 
-                <div class="view-details-btn" data-node-id="${node.id}" style="
-                    margin-top: 10px;
-                    padding: 8px 12px;
-                    background: var(--glass-bg);
-                    border: 1px solid var(--gemini-accent);
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    color: var(--gemini-accent);
-                    text-align: center;
-                    transition: all 0.2s;
-                    font-weight: 500;
-                " title="View detailed movie information">
-                    🎬 View Details
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <div class="view-details-btn" data-node-id="${node.id}" style="
+                        flex: 1;
+                        padding: 8px 12px;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--gemini-accent);
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        color: var(--gemini-accent);
+                        text-align: center;
+                        transition: all 0.2s;
+                        font-weight: 500;
+                    " title="View detailed movie information">
+                        🎬 View Details
+                    </div>
+                    <button class="remove-movie-btn" data-node-id="${node.id}" style="
+                        padding: 8px 12px;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--accent-color);
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        color: var(--accent-color);
+                        text-align: center;
+                        transition: all 0.2s;
+                        font-weight: 500;
+                    " title="Remove movie from network">
+                        🗑️ Remove
+                    </button>
                 </div>
             </div>
         `;
@@ -86,6 +102,21 @@ function renderSidebarMovies(nodes) {
     
     // Setup search functionality if not already done
     setupSidebarSearch();
+
+    // Setup remove button event listeners
+    setupRemoveButtonListeners();
+}
+
+function setupRemoveButtonListeners() {
+    const removeButtons = document.querySelectorAll('.remove-movie-btn');
+    removeButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const nodeId = parseInt(e.currentTarget.dataset.nodeId);
+            if (!isNaN(nodeId)) {
+                document.dispatchEvent(new CustomEvent('removeNode', { detail: { nodeId } }));
+            }
+        });
+    });
 }
 
 export function updateStats(nodes, links) {
@@ -215,6 +246,12 @@ function filterSidebarMovies(query) {
         
         // Search in overview
         if (details.overview && details.overview.toLowerCase().includes(query)) return true;
+
+        // Search in IMDb ID
+        if (details.ids?.imdb && details.ids.imdb.toLowerCase().includes(query)) return true;
+
+        // Search in TMDB ID
+        if (details.ids?.tmdb && details.ids.tmdb.toString().includes(query)) return true;
         
         return false;
     });

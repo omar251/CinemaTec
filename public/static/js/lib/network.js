@@ -346,6 +346,28 @@ export class DynamicMovieNetwork {
         }
     }
 
+    removeNode(nodeId) {
+        const nodeToRemove = this.nodes.find(n => n.id === nodeId);
+        if (!nodeToRemove) return;
+
+        // Remove node from nodes array
+        this.nodes = this.nodes.filter(n => n.id !== nodeId);
+
+        // Remove links connected to this node
+        this.links = this.links.filter(link => 
+            (typeof link.source === 'object' ? link.source.id : link.source) !== nodeId &&
+            (typeof link.target === 'object' ? link.target.id : link.target) !== nodeId
+        );
+
+        // Remove from nodeMap
+        this.nodeMap.delete(nodeToRemove.movieKey);
+
+        // Update visualization and UI
+        this.updateVisualization();
+        ui.updateSidebar(this.nodes);
+        ui.updateStats(this.nodes, this.links);
+    }
+
     clearNetwork() {
         this.nodes = [];
         this.links = [];

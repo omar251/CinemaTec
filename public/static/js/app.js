@@ -68,6 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clearBtn').addEventListener('click', () => network.clearNetwork());
         document.getElementById('centerBtn').addEventListener('click', () => network.centerNetwork());
         document.getElementById('labelsBtn').addEventListener('click', () => network.toggleLabels());
+
+        // Listen for custom event to remove a node
+        document.addEventListener('removeNode', (e) => {
+            const nodeId = e.detail.nodeId;
+            network.removeNode(nodeId);
+            ui.showNotification('Movie removed from network', 'info');
+        });
         
         // Color mode selector
         document.getElementById('colorModeSelect').addEventListener('change', (e) => {
