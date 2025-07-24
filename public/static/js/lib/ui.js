@@ -365,6 +365,18 @@ export function showMovieDetailsModal(node) {
                         border-radius: 10px;
                         border-left: 4px solid var(--accent-color);
                     ">${overview}</div>
+                    ${details.overview ? `
+                        <div style="margin-top: 8px; display: flex; gap: 5px; align-items: center;">
+                            <button class="tts-btn" id="tts-listen-btn" data-title="${details.title?.replace(/"/g, '&quot;')}" data-overview="${details.overview?.replace(/"/g, '&quot;')}" 
+                                    title="Listen to overview" style="background: var(--accent-color); border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                                🔊 Listen
+                            </button>
+                            <button class="tts-stop-btn" id="tts-stop-btn" title="Stop audio" 
+                                    style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                                ⏹️ Stop
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
 
                 ${details.trailer ? `
@@ -421,6 +433,40 @@ export function showMovieDetailsModal(node) {
             // Trigger expansion - we'll need to access the network instance
             const event = new CustomEvent('expandNode', { detail: { nodeId: node.id } });
             document.dispatchEvent(event);
+        });
+    }
+
+    // Add TTS button event listeners
+    const ttsListenBtn = modal.querySelector('#tts-listen-btn');
+    const ttsStopBtn = modal.querySelector('#tts-stop-btn');
+    
+    if (ttsListenBtn) {
+        ttsListenBtn.addEventListener('click', async () => {
+            const title = ttsListenBtn.dataset.title;
+            const overview = ttsListenBtn.dataset.overview;
+            
+            console.log('🎬 TTS Request:', { title, overview: overview?.substring(0, 100) + '...' });
+            
+            if (window.playMovieOverview) {
+                await window.playMovieOverview(title, overview);
+            } else {
+                console.error('TTS function not available');
+                // Fallback notification
+                const event = new CustomEvent('showNotification', { 
+                    detail: { message: 'TTS not available', type: 'error' } 
+                });
+                document.dispatchEvent(event);
+            }
+        });
+    }
+    
+    if (ttsStopBtn) {
+        ttsStopBtn.addEventListener('click', () => {
+            if (window.stopTTS) {
+                window.stopTTS();
+            } else {
+                console.error('TTS stop function not available');
+            }
         });
     }
 

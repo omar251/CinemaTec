@@ -1,4 +1,5 @@
 import { DynamicMovieNetwork } from './lib/network.js';
+import { TTSManager } from './lib/tts.js';
 import * as api from './lib/api.js';
 import * as ui from './lib/ui.js';
 
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const network = new DynamicMovieNetwork();
+    const tts = new TTSManager();
     
     // Enhanced search functionality
     let searchTimeout;
@@ -941,6 +943,23 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('ℹ️ AI button already exists');
         }
     }
+
+    // Global TTS functions for onclick handlers
+    window.playMovieOverview = async (title, overview) => {
+        try {
+            ui.showNotification('🔊 Starting audio...', 'info');
+            await tts.playMovieOverview(title, overview);
+            ui.showNotification('🎵 Audio playback started', 'success');
+        } catch (error) {
+            console.error('TTS Error:', error);
+            ui.showNotification(`Audio failed: ${error.message}`, 'error');
+        }
+    };
+
+    window.stopTTS = () => {
+        tts.stop();
+        ui.showNotification('⏹️ Audio stopped', 'info');
+    };
 
     setupGlobalEventListeners();
     checkAIAvailability(); // Check if AI features are available
