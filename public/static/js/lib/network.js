@@ -653,6 +653,7 @@ export class DynamicMovieNetwork {
     // Change color mode and update visualization
     setColorMode(mode) {
         this.colorMode = mode;
+        this.currentColorMode = mode; // Store the current mode for cross-category awareness
         this.updateVisualization();
         
         // Show notification about color change and data availability
@@ -675,12 +676,13 @@ export class DynamicMovieNetwork {
         
         ui.showNotification(message, dataAvailability.missing > 0 ? 'warning' : 'success');
         
-        // Update legend
-        this.updateColorLegend(mode);
+        // Update legend with current visible nodes (maintains cross-category awareness)
+        const visibleNodes = this.currentVisibleNodes || this.nodes;
+        this.updateColorLegend(mode, visibleNodes);
     }
 
     // Update the color legend based on current mode
-    updateColorLegend(mode) {
+    updateColorLegend(mode, filteredNodes = null) {
         const sidebar = document.getElementById('colorModeSidebar');
         const legendTitle = document.getElementById('legendTitle');
         const legendContent = document.getElementById('legendContent');
@@ -700,19 +702,26 @@ export class DynamicMovieNetwork {
         
         let legendHTML = '';
         
-        legendHTML = this.generateDynamicLegend(mode);
+        // Generate legend based on current visible nodes for database-like filtering
+        const currentVisibleNodes = filteredNodes || this.currentVisibleNodes || this.nodes;
+        legendHTML = this.generateDynamicLegend(mode, currentVisibleNodes);
+        
+        console.log(`🔧 Generating legend for ${mode} with ${currentVisibleNodes.length} visible nodes`);
         
         legendContent.innerHTML = legendHTML;
         sidebar.style.display = 'block';
         
         // Add click handlers to legend items for filtering (after content is set)
-        console.log('🔧 Legend HTML generated:', legendHTML);
+        console.log('🔧 Legend HTML generated for filtered data:', legendHTML);
         console.log('🔧 Legend content element:', legendContent);
         
-        setTimeout(() => {
-            console.log('🔧 Setting up legend interactivity...');
-            this.setupLegendInteractivity(mode);
-        }, 100);
+        // Set up interactivity immediately without delay
+        console.log('🔧 Setting up legend interactivity...');
+        this.setupLegendInteractivity(mode);
+        
+        // Restore visual selection state immediately after
+        console.log('🔧 Restoring selection state for mode:', mode);
+        this.restoreSelectionVisualState(mode);
     }
 
     // Check data availability for color modes
@@ -832,18 +841,41 @@ export class DynamicMovieNetwork {
             
             console.log(`✅ Setting up item ${index}: ${item.textContent}`);
             
-            // Add hover effect
-            item.style.cursor = 'pointer';
-            item.style.transition = 'all 0.2s ease';
-            item.dataset.filterValue = item.textContent.trim();
+            // Remove any existing event listeners by cloning the element
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
             
-            // Add click handler for multi-selection - directly to existing item
-            item.addEventListener('click', (e) => {
+            // Add hover effect
+            newItem.style.cursor = 'pointer';
+            newItem.style.transition = 'all 0.2s ease';
+            newItem.dataset.filterValue = newItem.textContent.trim();
+            
+            // Add click handler with immediate visual feedback
+            newItem.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log(`🖱️ Clicked legend item: ${item.textContent}`);
-                this.toggleLegendFilter(mode, item);
-            });
+                console.log(`🖱️ Clicked legend item: ${newItem.textContent}`);
+                
+                // Immediate visual feedback
+                const stableKey = this.extractStableFilterKey(mode, newItem.textContent.trim());
+                const isSelected = this.selectedFilters[mode] && this.selectedFilters[mode].has(stableKey);
+                
+                if (isSelected) {
+                    newItem.classList.remove('selected');
+                    newItem.style.background = 'transparent';
+                    newItem.style.border = 'none';
+                    newItem.style.padding = '0';
+                } else {
+                    newItem.classList.add('selected');
+                    newItem.style.background = 'rgba(233, 69, 96, 0.2)';
+                    newItem.style.border = '1px solid var(--accent-color)';
+                    newItem.style.borderRadius = '4px';
+                    newItem.style.padding = '2px 4px';
+                }
+                
+                // Process the filter change
+                this.toggleLegendFilter(mode, newItem);
+            }, { passive: false });
             
             // Add hover effects (only if not selected)
             item.addEventListener('mouseenter', (e) => {
@@ -854,8 +886,9 @@ export class DynamicMovieNetwork {
                     item.style.padding = '2px 4px';
                 }
                 
-                // Preview combined filter
-                this.previewCombinedFilter(mode, item.textContent.trim());
+                // Preview combined filter using stable key
+                const stableKey = this.extractStableFilterKey(mode, item.textContent.trim());
+                this.previewCombinedFilter(mode, stableKey);
             });
             
             item.addEventListener('mouseleave', (e) => {
@@ -865,9 +898,10 @@ export class DynamicMovieNetwork {
                     item.style.padding = '0';
                 }
                 
-                // Show current selection or clear
-                if (this.selectedFilters[mode].size > 0) {
-                    this.applyCombinedFilter(mode);
+                // Only reapply filters if there are active selections, otherwise just clear preview highlighting
+                const hasActiveFilters = Object.values(this.selectedFilters || {}).some(filterSet => filterSet.size > 0);
+                if (hasActiveFilters) {
+                    this.applyAllCategoryFilters();
                 } else {
                     this.clearHighlight();
                 }
@@ -880,67 +914,140 @@ export class DynamicMovieNetwork {
 
     // Toggle legend filter selection
     toggleLegendFilter(mode, item) {
-        const filterValue = item.dataset.filterValue;
+        // Initialize selectedFilters if not exists
+        if (!this.selectedFilters) {
+            this.selectedFilters = {
+                depth: new Set(),
+                genre: new Set(),
+                year: new Set(),
+                rating: new Set(),
+                popularity: new Set(),
+                runtime: new Set()
+            };
+        }
         
-        if (this.selectedFilters[mode].has(filterValue)) {
+        // Extract the stable filter key (without count)
+        const stableFilterKey = this.extractStableFilterKey(mode, item.textContent.trim());
+        console.log(`🔧 Toggle filter - Mode: ${mode}, Key: ${stableFilterKey}, Text: ${item.textContent.trim()}`);
+        
+        // Toggle the filter state
+        if (this.selectedFilters[mode].has(stableFilterKey)) {
             // Deselect
-            this.selectedFilters[mode].delete(filterValue);
-            item.classList.remove('selected');
-            item.style.background = 'transparent';
-            item.style.border = 'none';
-            item.style.padding = '0';
+            this.selectedFilters[mode].delete(stableFilterKey);
+            console.log(`❌ Deselected: ${stableFilterKey}`);
         } else {
             // Select
-            this.selectedFilters[mode].add(filterValue);
-            item.classList.add('selected');
-            item.style.background = 'rgba(233, 69, 96, 0.2)';
-            item.style.border = '1px solid var(--accent-color)';
-            item.style.borderRadius = '4px';
-            item.style.padding = '2px 4px';
+            this.selectedFilters[mode].add(stableFilterKey);
+            console.log(`✅ Selected: ${stableFilterKey}`);
         }
+        
+        // Store the stable key for restoration
+        item.dataset.stableKey = stableFilterKey;
+        
+        // Debug current state
+        console.log(`🔍 Current filters for ${mode}:`, Array.from(this.selectedFilters[mode]));
+        console.log(`🔍 All filters:`, Object.fromEntries(
+            Object.entries(this.selectedFilters).map(([k, v]) => [k, Array.from(v)])
+        ));
         
         // Apply combined filter
         this.applyCombinedFilter(mode);
     }
 
-    // Apply combined filter from all selected items
+    // Apply combined filter from all selected items across ALL categories
     applyCombinedFilter(mode) {
-        if (this.selectedFilters[mode].size === 0) {
-            this.clearHighlight();
-            ui.showNotification('All filters cleared', 'info');
+        // Apply filters from all categories, not just the current one
+        this.applyAllCategoryFilters();
+    }
+    
+    // Apply filters from all categories that have selections
+    applyAllCategoryFilters() {
+        console.log(`🔧 applyAllCategoryFilters called`);
+        
+        if (!this.selectedFilters) {
+            console.log(`⚠️ No selectedFilters object found`);
             return;
         }
         
-        // Find nodes matching ANY of the selected criteria (OR logic)
-        const matchingNodes = this.nodes.filter(node => {
-            return Array.from(this.selectedFilters[mode]).some(legendText => {
-                const filterValue = this.extractFilterValue(mode, legendText);
-                return this.nodeMatchesFilter(node, mode, filterValue, legendText);
-            });
+        // Check if any category has active filters
+        const hasAnyFilters = Object.values(this.selectedFilters).some(filterSet => filterSet.size > 0);
+        console.log(`🔍 Has any filters: ${hasAnyFilters}`);
+        
+        if (!hasAnyFilters) {
+            console.log(`🔄 No filters active, restoring all nodes`);
+            this.restoreAllNodes();
+            ui.showNotification('All filters cleared - showing all nodes', 'info');
+            return;
+        }
+        
+        // Start with all nodes and apply each category's filters
+        let filteredNodes = this.originalNodes || this.nodes;
+        const activeFilters = [];
+        
+        console.log(`🔧 Starting with ${filteredNodes.length} nodes`);
+        
+        // Apply filters from each category (AND logic between categories)
+        Object.entries(this.selectedFilters).forEach(([category, filterSet]) => {
+            if (filterSet.size > 0) {
+                console.log(`🔍 Applying ${category} filters:`, Array.from(filterSet));
+                
+                // Within each category, use OR logic
+                const categoryMatches = filteredNodes.filter(node => {
+                    return Array.from(filterSet).some(stableKey => {
+                        const filterValue = this.stableKeyToFilterValue(category, stableKey);
+                        const matches = this.nodeMatchesFilter(node, category, filterValue, stableKey);
+                        if (matches) {
+                            console.log(`✅ Node ${node.title} matches ${category}: ${stableKey}`);
+                        }
+                        return matches;
+                    });
+                });
+                
+                console.log(`🔍 ${category} filter: ${categoryMatches.length} matches from ${filteredNodes.length} nodes`);
+                filteredNodes = categoryMatches;
+                activeFilters.push(`${category}: ${Array.from(filterSet).join(', ')}`);
+            }
         });
         
-        console.log(`🔍 Combined filter: ${matchingNodes.length} nodes match ${this.selectedFilters[mode].size} criteria`);
+        console.log(`🔍 Multi-category filter: ${filteredNodes.length} nodes match criteria from ${activeFilters.length} categories`);
         
-        // Highlight matching nodes
-        this.highlightFilteredNodes(matchingNodes);
+        // Filter network to show only matching nodes
+        this.filterNetworkNodes(filteredNodes);
         
-        // Show notification
-        const selectedItems = Array.from(this.selectedFilters[mode]).join(', ');
-        ui.showNotification(`Filtered: ${matchingNodes.length} movies (${selectedItems})`, 'info');
+        // Show notification with all active filters
+        const totalNodes = this.originalNodes ? this.originalNodes.length : this.nodes.length;
+        const hiddenCount = totalNodes - filteredNodes.length;
+        ui.showNotification(`Showing ${filteredNodes.length} movies, ${hiddenCount} hidden | Active: ${activeFilters.join(' + ')}`, 'info');
+        
+        // Update visual indicators for active filters
+        this.updateCategoryFilterIndicators();
+        
+        // Update active filters display
+        this.updateActiveFiltersDisplay(filteredNodes);
+        
+        // Update all category legends to reflect current filtered state (but avoid double updates)
+        if (!this.isUpdatingLegend) {
+            this.updateAllCategoryLegends(filteredNodes);
+        }
+        
+        // Force update the current legend with filtered data
+        const currentMode = this.currentColorMode || this.colorMode || 'depth';
+        this.updateColorLegend(currentMode, filteredNodes);
     }
 
-    // Preview combined filter including hovered item
+    // Preview combined filter including hovered item (just highlight, don't remove)
     previewCombinedFilter(mode, hoveredText) {
         const previewFilters = new Set(this.selectedFilters[mode]);
         previewFilters.add(hoveredText);
         
         const matchingNodes = this.nodes.filter(node => {
-            return Array.from(previewFilters).some(legendText => {
-                const filterValue = this.extractFilterValue(mode, legendText);
-                return this.nodeMatchesFilter(node, mode, filterValue, legendText);
+            return Array.from(previewFilters).some(stableKey => {
+                const filterValue = this.stableKeyToFilterValue(mode, stableKey);
+                return this.nodeMatchesFilter(node, mode, filterValue, stableKey);
             });
         });
         
+        // Only highlight for preview, don't actually remove nodes
         this.highlightFilteredNodes(matchingNodes);
     }
 
@@ -1001,13 +1108,322 @@ export class DynamicMovieNetwork {
             item.style.padding = '0';
         });
         
+        this.applyAllCategoryFilters();
+    }
+
+    // Clear all filters across all categories
+    clearAllFiltersGlobal() {
+        if (!this.selectedFilters) return;
+        
+        // Clear all filter sets
+        Object.keys(this.selectedFilters).forEach(mode => {
+            this.selectedFilters[mode].clear();
+        });
+        
+        // Remove selected styling from all items
+        document.querySelectorAll('.legend-item.selected').forEach(item => {
+            item.classList.remove('selected');
+            item.style.background = 'transparent';
+            item.style.border = 'none';
+            item.style.padding = '0';
+        });
+        
+        // Restore all nodes
+        this.restoreAllNodes();
+        
+        // Update indicators
+        this.updateCategoryFilterIndicators();
+        
+        ui.showNotification('All filters cleared across all categories', 'info');
+    }
+
+    // Filter network to hide non-matching nodes (make them disappear visually)
+    filterNetworkNodes(matchingNodes) {
+        if (!this.svg) return;
+        
+        const matchingIds = new Set(matchingNodes.map(n => n.id));
+        
+        // Hide/show nodes based on filter
+        this.svg.selectAll('.node')
+            .style('opacity', d => matchingIds.has(d.id) ? 1 : 0)
+            .style('pointer-events', d => matchingIds.has(d.id) ? 'all' : 'none');
+        
+        // Hide/show links - only show links between visible nodes
+        this.svg.selectAll('.link')
+            .style('opacity', d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return matchingIds.has(sourceId) && matchingIds.has(targetId) ? 0.6 : 0;
+            });
+        
+        // Hide/show labels if they're visible
+        if (this.showLabels) {
+            this.svg.selectAll('.node-label')
+                .style('opacity', d => matchingIds.has(d.id) ? 1 : 0);
+        }
+        
+        // Update sidebar to show only filtered movies
+        if (window.ui && window.ui.renderSidebarMovies) {
+            window.ui.renderSidebarMovies(matchingNodes);
+        }
+        
+        // Store current visible nodes for cross-category awareness
+        this.currentVisibleNodes = matchingNodes;
+    }
+    
+    // Restore all nodes to the visualization (make them all visible again)
+    restoreAllNodes() {
+        if (!this.svg) return;
+        
+        // Show all nodes
+        this.svg.selectAll('.node')
+            .style('opacity', 1)
+            .style('pointer-events', 'all');
+        
+        // Show all links
+        this.svg.selectAll('.link')
+            .style('opacity', 0.6);
+        
+        // Show all labels if they're visible
+        if (this.showLabels) {
+            this.svg.selectAll('.node-label')
+                .style('opacity', 1);
+        }
+        
+        // Clear highlighting
         this.clearHighlight();
-        ui.showNotification('All filters cleared', 'info');
+        
+        // Update sidebar to show all movies
+        if (window.ui && window.ui.renderSidebarMovies) {
+            const allNodes = this.originalNodes || this.nodes;
+            window.ui.renderSidebarMovies(allNodes);
+        }
+        
+        // Update all category legends to reflect full dataset
+        this.updateAllCategoryLegends(this.originalNodes || this.nodes);
+        
+        // Update active filters display
+        this.updateActiveFiltersDisplay(this.originalNodes || this.nodes);
+    }
+    
+    // Extract stable filter key (without changing counts)
+    extractStableFilterKey(mode, legendText) {
+        switch (mode) {
+            case 'depth':
+                // Extract just the depth number: "Depth 1 (5 movies) - Direct connections" -> "Depth 1"
+                const depthMatch = legendText.match(/Depth (\d+)/);
+                return depthMatch ? `Depth ${depthMatch[1]}` : legendText;
+                
+            case 'genre':
+                // Extract genre name: "Action (10 movies)" -> "Action"
+                const genreMatch = legendText.match(/^([^(]+)/);
+                return genreMatch ? genreMatch[1].trim() : legendText;
+                
+            case 'year':
+                // Extract decade: "2000s (8 movies)" -> "2000s"
+                const yearMatch = legendText.match(/^(\d{4}s)/);
+                return yearMatch ? yearMatch[1] : legendText;
+                
+            case 'rating':
+                // Extract rating range: "Excellent (7-10) - 5 movies" -> "Excellent (7-10)"
+                const ratingMatch = legendText.match(/^([^-]+)/);
+                return ratingMatch ? ratingMatch[1].trim() : legendText;
+                
+            case 'popularity':
+                // Extract popularity level: "Low popularity - 7 movies" -> "Low popularity"
+                const popularityMatch = legendText.match(/^([^-]+)/);
+                return popularityMatch ? popularityMatch[1].trim() : legendText;
+                
+            case 'runtime':
+                // Extract runtime range: "Short (60-90 min) - 3 movies" -> "Short (60-90 min)"
+                const runtimeMatch = legendText.match(/^([^-]+)/);
+                return runtimeMatch ? runtimeMatch[1].trim() : legendText;
+                
+            default:
+                return legendText;
+        }
+    }
+
+    // Convert stable key back to filter value for node matching
+    stableKeyToFilterValue(mode, stableKey) {
+        switch (mode) {
+            case 'depth':
+                // "Depth 1" -> extract "1"
+                const depthMatch = stableKey.match(/Depth (\d+)/);
+                return depthMatch ? parseInt(depthMatch[1]) : stableKey;
+                
+            case 'genre':
+                // "Action" -> "Action"
+                return stableKey;
+                
+            case 'year':
+                // "2000s" -> "2000s"
+                return stableKey;
+                
+            case 'rating':
+                // "Excellent (7-10)" -> determine range
+                if (stableKey.includes('Poor')) return 'poor';
+                if (stableKey.includes('Average')) return 'average';
+                if (stableKey.includes('Excellent')) return 'excellent';
+                return stableKey;
+                
+            case 'popularity':
+                // "Low popularity" -> "low"
+                if (stableKey.includes('Low')) return 'low';
+                if (stableKey.includes('Medium')) return 'medium';
+                if (stableKey.includes('High') && !stableKey.includes('Very')) return 'high';
+                if (stableKey.includes('Very')) return 'very_popular';
+                return stableKey;
+                
+            case 'runtime':
+                // "Short (60-90 min)" -> "short"
+                if (stableKey.includes('Short')) return 'short';
+                if (stableKey.includes('Medium')) return 'medium';
+                if (stableKey.includes('Long') && !stableKey.includes('Very')) return 'long';
+                if (stableKey.includes('Very')) return 'very_long';
+                return stableKey;
+                
+            default:
+                return stableKey;
+        }
+    }
+
+    // Update visual indicators for categories that have active filters
+    updateCategoryFilterIndicators() {
+        if (!this.selectedFilters) return;
+        
+        // Update each color mode button to show if it has active filters
+        document.querySelectorAll('.color-mode-btn').forEach(btn => {
+            const mode = btn.dataset.mode;
+            const hasFilters = this.selectedFilters[mode] && this.selectedFilters[mode].size > 0;
+            
+            if (hasFilters) {
+                btn.classList.add('has-filters');
+                // Add a small indicator
+                if (!btn.querySelector('.filter-indicator')) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'filter-indicator';
+                    indicator.style.cssText = `
+                        position: absolute;
+                        top: 4px;
+                        right: 4px;
+                        width: 8px;
+                        height: 8px;
+                        background: var(--accent-color);
+                        border-radius: 50%;
+                        border: 1px solid white;
+                    `;
+                    btn.appendChild(indicator);
+                }
+            } else {
+                btn.classList.remove('has-filters');
+                const indicator = btn.querySelector('.filter-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+        });
+    }
+
+    // Update the active filters display box
+    updateActiveFiltersDisplay(visibleNodes) {
+        const filtersList = document.getElementById('filtersList');
+        const filterStats = document.getElementById('filterStats');
+        const clearAllBtn = document.getElementById('clearAllFiltersBtn');
+        
+        if (!filtersList || !filterStats || !clearAllBtn) return;
+        
+        const totalNodes = this.originalNodes ? this.originalNodes.length : this.nodes.length;
+        const visibleCount = visibleNodes ? visibleNodes.length : totalNodes;
+        
+        // Check if any filters are active
+        const activeFilters = [];
+        let hasAnyFilters = false;
+        
+        if (this.selectedFilters) {
+            Object.entries(this.selectedFilters).forEach(([category, filterSet]) => {
+                if (filterSet.size > 0) {
+                    hasAnyFilters = true;
+                    const categoryName = {
+                        depth: 'Depth',
+                        genre: 'Genre',
+                        year: 'Year',
+                        rating: 'Rating',
+                        popularity: 'Popularity',
+                        runtime: 'Runtime'
+                    }[category] || category;
+                    
+                    const filters = Array.from(filterSet).join(', ');
+                    activeFilters.push(`<div style="margin-bottom: 3px;"><strong>${categoryName}:</strong> ${filters}</div>`);
+                }
+            });
+        }
+        
+        // Update display
+        if (hasAnyFilters) {
+            filtersList.innerHTML = activeFilters.join('');
+            filterStats.textContent = `${visibleCount} / ${totalNodes} movies`;
+            clearAllBtn.style.display = 'inline-block';
+        } else {
+            filtersList.innerHTML = 'No filters active';
+            filterStats.textContent = `${totalNodes} / ${totalNodes} movies`;
+            clearAllBtn.style.display = 'none';
+        }
+        
+        console.log(`📊 Filter Display Updated: ${visibleCount}/${totalNodes} movies, ${activeFilters.length} categories active`);
+    }
+
+    // Update all category legends to show counts based on currently visible nodes
+    updateAllCategoryLegends(visibleNodes) {
+        if (!visibleNodes || visibleNodes.length === 0) return;
+        
+        // Prevent recursive updates
+        if (this.isUpdatingLegend) return;
+        this.isUpdatingLegend = true;
+        
+        // Store the current visible nodes for legend generation
+        this.currentVisibleNodes = visibleNodes;
+        
+        // Get current active mode - use the stored mode or fall back to colorMode
+        const currentMode = this.currentColorMode || this.colorMode || 'depth';
+        
+        // Update the current legend with filtered data
+        this.updateColorLegend(currentMode, visibleNodes);
+        
+        // Reset the flag after a delay
+        setTimeout(() => {
+            this.isUpdatingLegend = false;
+        }, 200);
+    }
+
+    // Restore visual selection state for legend items
+    restoreSelectionVisualState(mode) {
+        if (!this.selectedFilters || !this.selectedFilters[mode]) return;
+        
+        const selectedKeys = this.selectedFilters[mode];
+        if (selectedKeys.size === 0) return;
+        
+        // Find and mark selected legend items using stable keys
+        document.querySelectorAll('.legend-item').forEach(item => {
+            const legendText = item.textContent.trim();
+            const stableKey = this.extractStableFilterKey(mode, legendText);
+            
+            if (selectedKeys.has(stableKey)) {
+                item.classList.add('selected');
+                item.style.background = 'rgba(233, 69, 96, 0.2)';
+                item.style.border = '1px solid var(--accent-color)';
+                item.style.borderRadius = '4px';
+                item.style.padding = '2px 4px';
+                item.dataset.stableKey = stableKey;
+                
+                console.log(`🔄 Restored selection for: ${stableKey} (from text: ${legendText})`);
+            }
+        });
     }
 
     // Generate dynamic legend based on actual data in the network
-    generateDynamicLegend(mode) {
-        const dataAnalysis = this.analyzeNetworkData(mode);
+    generateDynamicLegend(mode, nodesToAnalyze = null) {
+        const dataAnalysis = this.analyzeNetworkData(mode, nodesToAnalyze);
         let legendHTML = '';
         
         switch (mode) {
@@ -1103,7 +1519,7 @@ export class DynamicMovieNetwork {
     }
 
     // Analyze network data to determine what legend items to show
-    analyzeNetworkData(mode) {
+    analyzeNetworkData(mode, nodesToAnalyze = null) {
         const analysis = {
             depths: new Set(),
             depthCounts: {},
@@ -1120,7 +1536,10 @@ export class DynamicMovieNetwork {
             missingRuntime: 0
         };
         
-        this.nodes.forEach(node => {
+        // Use provided nodes or fall back to current visible nodes for accurate counts
+        const nodes = nodesToAnalyze || this.currentVisibleNodes || this.nodes;
+        
+        nodes.forEach(node => {
             const details = node.fullDetails || node.basicDetails || {};
             
             // Analyze depth

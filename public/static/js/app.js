@@ -85,8 +85,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.color-mode-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
-                // Set color mode
+                // Set color mode and update legend (preserves existing filters)
                 network.setColorMode(mode);
+                
+                // Apply all category filters to maintain persistent filtering and update counts
+                if (network.applyAllCategoryFilters) {
+                    // Small delay to ensure the color mode is set first
+                    setTimeout(() => {
+                        network.applyAllCategoryFilters();
+                    }, 50);
+                }
                 
                 // Show/hide load details button based on data availability
                 const dataAvailability = network.checkDataAvailability(mode);
@@ -100,6 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadDetailsBtn.style.display = 'none';
                     btn.classList.remove('needs-data');
                 }
+                
+                // Update visual indicators for categories with active filters
+                network.updateCategoryFilterIndicators();
             });
         });
 
@@ -115,6 +126,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             sidebar.classList.toggle('minimized');
             toggleBtn.textContent = sidebar.classList.contains('minimized') ? '+' : '−';
+        });
+
+        // Clear all filters button
+        document.getElementById('clearAllFiltersBtn').addEventListener('click', () => {
+            if (network && network.clearAllFiltersGlobal) {
+                network.clearAllFiltersGlobal();
+            }
         });
 
         // Add AI insights button if it exists
@@ -983,6 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize the color sidebar with default mode
     if (network) {
+        network.currentColorMode = 'depth'; // Ensure the mode is set
         network.updateColorLegend('depth'); // Initialize with depth mode
     }
 });
