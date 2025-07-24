@@ -767,6 +767,84 @@
             outline-offset: 2px;
         }
 
+        /* Color Mode Sidebar Styling */
+        .color-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-mode-btn.active {
+            border-color: var(--accent-color) !important;
+            background: rgba(233, 69, 96, 0.1) !important;
+            box-shadow: 0 0 0 1px rgba(233, 69, 96, 0.2);
+        }
+
+        .color-mode-btn.needs-data {
+            border-color: var(--warning-color) !important;
+            background: rgba(245, 158, 11, 0.1) !important;
+        }
+
+        .color-mode-btn.needs-data::after {
+            content: "!";
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: var(--warning-color);
+            color: white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .legend-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item.selected {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid var(--accent-color);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+        }
+
+        .color-mode-sidebar.minimized .color-mode-icons,
+        .color-mode-sidebar.minimized .legend-section {
+            display: none;
+        }
+
+        .color-mode-sidebar.minimized {
+            min-width: auto;
+            width: 60px;
+        }
+
+        #toggleColorSidebar:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
         /* Color legend styling */
         .legend-item {
             display: flex;
@@ -847,66 +925,209 @@
             <button class="control-btn" id="clearBtn">🗑️ Clear</button>
             <button class="control-btn" id="centerBtn">🎯 Center</button>
             <button class="control-btn" id="labelsBtn">🏷️ Labels</button>
-            <select class="control-btn" id="colorModeSelect" style="
-                background: var(--glass-bg);
-                border: 1px solid var(--glass-border);
-                color: var(--text-color);
-                padding: 8px 12px;
-                border-radius: 8px;
-                font-size: 12px;
-                cursor: pointer;
-                backdrop-filter: blur(10px);
-            ">
-                <option value="depth" style="background: var(--primary-color); color: var(--text-color);">🌈 Network Depth</option>
-                <option value="year" style="background: var(--primary-color); color: var(--text-color);">📅 Release Decade</option>
-                <option value="genre" style="background: var(--primary-color); color: var(--text-color);">🎭 Primary Genre*</option>
-                <option value="rating" style="background: var(--primary-color); color: var(--text-color);">⭐ Movie Rating*</option>
-                <option value="popularity" style="background: var(--primary-color); color: var(--text-color);">👥 Popularity*</option>
-                <option value="runtime" style="background: var(--primary-color); color: var(--text-color);">⏱️ Runtime*</option>
-            </select>
-            <button class="control-btn" id="loadDetailsBtn" style="
-                background: var(--glass-bg);
-                border: 1px solid var(--gemini-accent);
-                color: var(--gemini-accent);
-                padding: 8px 12px;
-                border-radius: 8px;
-                font-size: 12px;
-                cursor: pointer;
-                display: none;
-            " title="Load missing movie details for current color mode">
-                📄 Load Details
-            </button>
         </div>
         
-        <!-- Color Legend -->
-        <div class="color-legend" id="colorLegend" style="
+        <!-- Integrated Color Mode & Legend Sidebar -->
+        <div class="color-mode-sidebar" id="colorModeSidebar" style="
             position: fixed;
             top: 120px;
             left: 20px;
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            border-radius: 10px;
+            border-radius: 15px;
             padding: 15px;
-            min-width: 200px;
-            max-width: 250px;
+            min-width: 220px;
+            max-width: 280px;
             z-index: 1000;
-            display: none;
+            display: block;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         ">
-            <div style="font-weight: bold; margin-bottom: 10px; color: var(--text-color); font-size: 14px;">
-                <span id="legendTitle">Color Legend</span>
-                <button id="closeLegend" style="
-                    float: right;
+            <!-- Header -->
+            <div style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid var(--glass-border);
+            ">
+                <h3 style="
+                    color: var(--text-color);
+                    font-size: 14px;
+                    font-weight: 600;
+                    margin: 0;
+                ">🎨 Color Modes</h3>
+                <button id="toggleColorSidebar" style="
                     background: none;
                     border: none;
                     color: var(--text-secondary);
                     cursor: pointer;
                     font-size: 16px;
-                    padding: 0;
-                    margin-left: 10px;
-                ">&times;</button>
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
+                " title="Minimize/Expand">−</button>
             </div>
-            <div id="legendContent"></div>
+
+            <!-- Color Mode Icons -->
+            <div class="color-mode-icons" id="colorModeIcons" style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-bottom: 15px;
+            ">
+                <button class="color-mode-btn active" data-mode="depth" style="
+                    background: var(--glass-bg);
+                    border: 2px solid var(--accent-color);
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Network Depth">
+                    <span>🌈</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Depth</small>
+                </button>
+                
+                <button class="color-mode-btn" data-mode="year" style="
+                    background: var(--glass-bg);
+                    border: 2px solid transparent;
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Release Decade">
+                    <span>📅</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Year</small>
+                </button>
+                
+                <button class="color-mode-btn" data-mode="genre" style="
+                    background: var(--glass-bg);
+                    border: 2px solid transparent;
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Primary Genre">
+                    <span>🎭</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Genre</small>
+                </button>
+                
+                <button class="color-mode-btn" data-mode="rating" style="
+                    background: var(--glass-bg);
+                    border: 2px solid transparent;
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Movie Rating">
+                    <span>⭐</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Rating</small>
+                </button>
+                
+                <button class="color-mode-btn" data-mode="popularity" style="
+                    background: var(--glass-bg);
+                    border: 2px solid transparent;
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Popularity">
+                    <span>👥</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Popular</small>
+                </button>
+                
+                <button class="color-mode-btn" data-mode="runtime" style="
+                    background: var(--glass-bg);
+                    border: 2px solid transparent;
+                    color: var(--text-color);
+                    padding: 12px 8px;
+                    border-radius: 10px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    position: relative;
+                " title="Runtime">
+                    <span>⏱️</span>
+                    <small style="font-size: 10px; opacity: 0.8;">Runtime</small>
+                </button>
+            </div>
+
+            <!-- Legend Section -->
+            <div class="legend-section" id="legendSection" style="
+                border-top: 1px solid var(--glass-border);
+                padding-top: 15px;
+            ">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 10px;
+                ">
+                    <h4 id="legendTitle" style="
+                        color: var(--text-color);
+                        font-size: 13px;
+                        font-weight: 600;
+                        margin: 0;
+                    ">Network Depth</h4>
+                    <button id="loadDetailsBtn" style="
+                        background: var(--glass-bg);
+                        border: 1px solid var(--gemini-accent);
+                        color: var(--gemini-accent);
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        font-size: 10px;
+                        cursor: pointer;
+                        display: none;
+                    " title="Load missing movie details">📄 Load</button>
+                </div>
+                
+                <div id="legendContent" style="
+                    font-size: 12px;
+                    line-height: 1.4;
+                ">
+                    <!-- Legend items will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 

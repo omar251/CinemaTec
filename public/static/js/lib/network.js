@@ -681,11 +681,11 @@ export class DynamicMovieNetwork {
 
     // Update the color legend based on current mode
     updateColorLegend(mode) {
-        const legend = document.getElementById('colorLegend');
+        const sidebar = document.getElementById('colorModeSidebar');
         const legendTitle = document.getElementById('legendTitle');
         const legendContent = document.getElementById('legendContent');
         
-        if (!legend || !legendTitle || !legendContent) return;
+        if (!sidebar || !legendTitle || !legendContent) return;
         
         const modeNames = {
             depth: 'Network Depth',
@@ -703,7 +703,7 @@ export class DynamicMovieNetwork {
         legendHTML = this.generateDynamicLegend(mode);
         
         legendContent.innerHTML = legendHTML;
-        legend.style.display = 'block';
+        sidebar.style.display = 'block';
         
         // Add click handlers to legend items for filtering (after content is set)
         console.log('🔧 Legend HTML generated:', legendHTML);

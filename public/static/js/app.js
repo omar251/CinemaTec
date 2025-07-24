@@ -76,20 +76,31 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.showNotification('Movie removed from network', 'info');
         });
         
-        // Color mode selector
-        document.getElementById('colorModeSelect').addEventListener('change', (e) => {
-            network.setColorMode(e.target.value);
-            
-            // Show/hide load details button based on data availability
-            const dataAvailability = network.checkDataAvailability(e.target.value);
-            const loadDetailsBtn = document.getElementById('loadDetailsBtn');
-            
-            if (dataAvailability.missing > 0) {
-                loadDetailsBtn.style.display = 'inline-block';
-                loadDetailsBtn.textContent = `📄 Load ${dataAvailability.missing} Details`;
-            } else {
-                loadDetailsBtn.style.display = 'none';
-            }
+        // Color mode icon buttons
+        document.querySelectorAll('.color-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = btn.dataset.mode;
+                
+                // Update active state
+                document.querySelectorAll('.color-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Set color mode
+                network.setColorMode(mode);
+                
+                // Show/hide load details button based on data availability
+                const dataAvailability = network.checkDataAvailability(mode);
+                const loadDetailsBtn = document.getElementById('loadDetailsBtn');
+                
+                if (dataAvailability.missing > 0) {
+                    loadDetailsBtn.style.display = 'inline-block';
+                    loadDetailsBtn.textContent = `📄 Load ${dataAvailability.missing}`;
+                    btn.classList.add('needs-data');
+                } else {
+                    loadDetailsBtn.style.display = 'none';
+                    btn.classList.remove('needs-data');
+                }
+            });
         });
 
         // Load details button
@@ -97,9 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
             network.loadMissingDetailsForColorMode();
         });
 
-        // Legend close button
-        document.getElementById('closeLegend').addEventListener('click', () => {
-            document.getElementById('colorLegend').style.display = 'none';
+        // Sidebar toggle button
+        document.getElementById('toggleColorSidebar').addEventListener('click', () => {
+            const sidebar = document.getElementById('colorModeSidebar');
+            const toggleBtn = document.getElementById('toggleColorSidebar');
+            
+            sidebar.classList.toggle('minimized');
+            toggleBtn.textContent = sidebar.classList.contains('minimized') ? '+' : '−';
         });
 
         // Add AI insights button if it exists
@@ -936,14 +951,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Insert before the color mode select to maintain order
-            const colorModeSelect = document.getElementById('colorModeSelect');
-            if (colorModeSelect) {
-                controls.insertBefore(aiBtn, colorModeSelect);
-                console.log('✅ AI button inserted before color mode select');
-            } else {
-                controls.appendChild(aiBtn);
-                console.log('✅ AI button appended to controls');
-            }
+            // Just append the AI button to controls since color mode is now in sidebar
+            controls.appendChild(aiBtn);
+            console.log('✅ AI button appended to controls');
         } else if (!controls) {
             console.log('❌ Controls container not found');
         } else {
@@ -970,4 +980,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupGlobalEventListeners();
     checkAIAvailability(); // Check if AI features are available
+    
+    // Initialize the color sidebar with default mode
+    if (network) {
+        network.updateColorLegend('depth'); // Initialize with depth mode
+    }
 });
