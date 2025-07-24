@@ -14,20 +14,73 @@ class TTSManager {
 
     async init() {
         try {
+            // Check for browser TTS support first
+            if ('speechSynthesis' in window) {
+                // Load voices (may be async in some browsers)
+                if (window.speechSynthesis.getVoices().length === 0) {
+                    // Wait for voices to load if needed
+                    if (speechSynthesis.onvoiceschanged !== undefined) {
+                        await new Promise(resolve => {
+                            speechSynthesis.onvoiceschanged = resolve;
+                            // Set a timeout in case voices never load
+                            setTimeout(resolve, 1000);
+                        });
+                    }
+                }
+                
+                // Get available browser voices
+                const browserVoices = window.speechSynthesis.getVoices();
+                console.log(`🎤 Browser TTS: ${browserVoices.length} voices available`);
+                
+                // Filter to English voices
+                const englishVoices = browserVoices.filter(v => v.lang.startsWith('en'));
+                console.log(`🎤 English voices: ${englishVoices.length}`);
+                
+                // Check for premium voices
+                const premiumVoices = browserVoices.filter(v => 
+                    v.name.includes('Microsoft') || 
+                    v.name.includes('Google') || 
+                    v.name.toLowerCase().includes('neural') ||
+                    v.name.toLowerCase().includes('aria') ||
+                    v.name.toLowerCase().includes('guy') ||
+                    v.name.toLowerCase().includes('premium') ||
+                    v.name.toLowerCase().includes('enhanced') ||
+                    v.name.toLowerCase().includes('wavenet')
+                );
+                
+                // Log some premium voices for debugging
+                if (premiumVoices.length > 0) {
+                    console.log('🎤 Premium voices:', premiumVoices.slice(0, 5).map(v => v.name).join(', ') + 
+                                (premiumVoices.length > 5 ? '...' : ''));
+                }
+                
+                if (premiumVoices.length > 0) {
+                    console.log(`🎤 Premium voices available: ${premiumVoices.length}`);
+                }
+            }
+            
+            // Still check server status
             const response = await fetch('/api/tts/status');
             const status = await response.json();
             
-            this.isAvailable = status.initialized && status.voices.length > 0;
+            console.log('🔍 TTS Status Response:', status);
+            
+            // Browser TTS is always available if supported
+            this.isAvailable = 'speechSynthesis' in window;
             this.voices = status.voices || [];
             
             if (this.isAvailable) {
-                console.log(`✅ TTS available with ${this.voices.length} English voices`);
+                console.log(`✅ TTS available with browser speech synthesis`);
             } else {
-                console.log('⚠️ TTS not available');
+                console.log('⚠️ TTS not available - browser does not support speech synthesis');
             }
         } catch (error) {
             console.log('❌ TTS initialization failed:', error.message);
-            this.isAvailable = false;
+            // Even if server fails, browser TTS might still work
+            this.isAvailable = 'speechSynthesis' in window;
+            if (this.isAvailable) {
+                console.log('✅ Using browser TTS as fallback');
+            }
         }
     }
 
@@ -177,10 +230,90 @@ class TTSManager {
     // Play audio using browser's built-in TTS
     playWithBrowserTTS(text, resolve, reject) {
         if ('speechSynthesis' in window) {
+            // Get available voices
+            const voices = window.speechSynthesis.getVoices();
+            console.log(`🎤 Available browser voices: ${voices.length}`);
+            
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.9;
-            utterance.pitch = 1.0;
-            utterance.volume = 0.8;
+            
+            // Try to find a good quality voice
+            let selectedVoice = null;
+            
+            // Voice selection priority:
+            // 1. Microsoft voices (Edge/Chrome on Windows)
+            // 2. Google voices (Chrome)
+            // 3. Apple voices (Safari)
+            // 4. Any other voice
+            // 5. Default voice
+            
+            // Log all voices for debugging
+            console.log('🔍 Available voices:', voices.map(v => `${v.name} (${v.lang})`).join(', '));
+            
+            // Look for Microsoft voices first (best quality)
+            selectedVoice = voices.find(v => 
+                (v.name.includes('Microsoft') || v.name.toLowerCase().includes('aria') || v.name.toLowerCase().includes('guy')) && 
+                v.lang.startsWith('en')
+            );
+            
+            // Then Google voices
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => 
+                    (v.name.includes('Google') || v.name.toLowerCase().includes('neural')) && 
+                    v.lang.startsWith('en')
+                );
+            }
+            
+            // Then Apple voices
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => 
+                    (v.name.includes('Samantha') || v.name.includes('Alex') || 
+                     v.name.includes('Daniel') || v.name.includes('Karen')) && 
+                    v.lang.startsWith('en')
+                );
+            }
+            
+            // Then any natural-sounding English voice
+            if (!selectedVoice) {
+                const naturalVoiceKeywords = ['natural', 'premium', 'enhanced', 'wavenet', 'neural', 'standard'];
+                selectedVoice = voices.find(v => 
+                    naturalVoiceKeywords.some(keyword => v.name.toLowerCase().includes(keyword)) && 
+                    v.lang.startsWith('en')
+                );
+            }
+            
+            // Then any English US voice
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang === 'en-US');
+            }
+            
+            // Then any English voice
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang.startsWith('en'));
+            }
+            
+            // Let user select a voice
+            console.log('🎤 To select a specific voice, use one of these in the browser console:');
+            console.log('window.selectedVoiceName = "Microsoft David";  // Replace with any voice name');
+            
+            // Check for user-selected voice
+            if (window.selectedVoiceName) {
+                const userVoice = voices.find(v => v.name.includes(window.selectedVoiceName));
+                if (userVoice) {
+                    selectedVoice = userVoice;
+                    console.log(`🎤 Using user-selected voice: ${userVoice.name}`);
+                }
+            }
+            
+            // Use selected voice or default
+            if (selectedVoice) {
+                console.log(`🎤 Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+                utterance.voice = selectedVoice;
+            }
+            
+            // Set speech parameters for better quality
+            utterance.rate = 0.95;      // Slightly slower for better clarity
+            utterance.pitch = 1.0;      // Natural pitch
+            utterance.volume = 0.9;     // Slightly louder
             
             utterance.onend = () => {
                 this.isPlaying = false;

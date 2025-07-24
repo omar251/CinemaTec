@@ -1,35 +1,39 @@
 /**
- * Text-to-Speech service with browser TTS fallback
- * (Edge TTS libraries have compatibility issues, using reliable browser TTS)
+ * Text-to-Speech service using Microsoft Edge TTS
+ * Provides high-quality neural voice synthesis for movie overviews
  */
 const logger = require('../utils/logger');
 const cacheService = require('./cacheService');
+const edgeTTSService = require('./edgeTTSService');
 
 class TTSService {
   constructor() {
     this.isInitialized = false;
     this.availableVoices = [];
-    this.defaultVoice = 'en-US-AriaNeural'; // Default female voice
+    this.defaultVoice = 'en-US-AriaNeural';
     this.init();
   }
 
   async init() {
     try {
-      // Use browser TTS as the primary method (most reliable)
-      this.availableVoices = [
-        { ShortName: 'browser-default', FriendlyName: 'Browser Default Voice', Gender: 'Female', Locale: 'en-US' },
-        { ShortName: 'browser-male', FriendlyName: 'Browser Male Voice', Gender: 'Male', Locale: 'en-US' },
-        { ShortName: 'browser-female', FriendlyName: 'Browser Female Voice', Gender: 'Female', Locale: 'en-US' }
-      ];
+      // Use the Edge TTS service
       this.isInitialized = true;
-      logger.info(`TTS service initialized with browser TTS and ${this.availableVoices.length} voice options`);
+      
+      // Define available voices (hardcoded for now)
+      this.availableVoices = [
+        { ShortName: 'en-US-AriaNeural', FriendlyName: 'Microsoft Aria (Neural)', Gender: 'Female', Locale: 'en-US' },
+        { ShortName: 'en-US-GuyNeural', FriendlyName: 'Microsoft Guy (Neural)', Gender: 'Male', Locale: 'en-US' },
+        { ShortName: 'en-GB-SoniaNeural', FriendlyName: 'Microsoft Sonia (Neural)', Gender: 'Female', Locale: 'en-GB' },
+        { ShortName: 'en-AU-NatashaNeural', FriendlyName: 'Microsoft Natasha (Neural)', Gender: 'Female', Locale: 'en-AU' }
+      ];
+      
+      logger.info(`✅ TTS service initialized with Edge TTS and ${this.availableVoices.length} voices`);
     } catch (error) {
       logger.error(`Failed to initialize TTS service: ${error.message}`);
       this.isInitialized = false;
     }
   }
 
-  // Get available voices filtered for English
   getEnglishVoices() {
     if (!this.isInitialized || !this.availableVoices) return [];
     
@@ -43,21 +47,18 @@ class TTSService {
     }));
   }
 
-  // Synthesize text to speech
   async synthesizeText(text, voiceName = null, options = {}) {
     if (!text || text.trim().length === 0) {
       throw new Error('Text is required for synthesis');
     }
 
-    // Use provided voice or default
     const voice = voiceName || this.defaultVoice;
     
     try {
-      // Create cache key for this synthesis
-      const textHash = Buffer.from(text).toString('base64').substring(0, 100);
+      // Create cache key
+      const crypto = require('crypto');
+      const textHash = crypto.createHash('md5').update(text).digest('hex');
       const cacheKey = `tts:${voice}:${textHash}`;
-      
-      logger.info(`TTS synthesis request: "${text.substring(0, 50)}..." (${text.length} chars)`);
       
       // Check cache first
       const cached = cacheService.getApiCache(cacheKey);
@@ -66,74 +67,62 @@ class TTSService {
         return cached;
       }
 
-      // Use browser-based TTS (reliable and works everywhere)
-      logger.info('🎵 Using browser-based TTS for synthesis');
-      
-      const response = {
-        useBrowserTTS: true,
-        text: text,
-        voice: voice,
-        movieTitle: text.includes('Here\'s the overview') ? text.split(':')[0].replace('Here\'s the overview for ', '') : 'Movie'
-      };
-      
-      // Return the response as base64 JSON (the frontend will detect this)
-      const responseBase64 = Buffer.from(JSON.stringify(response)).toString('base64');
-      logger.info(`🎵 Returning browser TTS instructions for: ${response.movieTitle}`);
-      return responseBase64;
+      // Use Edge TTS
+      try {
+        logger.info(`🎵 Using Edge TTS for synthesis with voice: ${voice}`);
+        logger.info(`📝 Text to synthesize: "${text.substring(0, 100)}..."`);
+        
+        // Use the Edge TTS service to generate audio
+        const audioBuffer = await edgeTTSService.synthesizeText(text, voice);
+        
+        // Check if we got valid audio data
+        if (!audioBuffer || audioBuffer.length === 0) {
+          throw new Error('No audio data generated');
+        }
+        
+        // Convert to base64
+        const audioBase64 = audioBuffer.toString('base64');
+        
+        // Cache the result
+        cacheService.setApiCache(cacheKey, audioBase64, 3600);
+        
+        logger.info(`✅ Edge TTS synthesis successful, audio length: ${audioBuffer.length}`);
+        return audioBase64;
+        
+      } catch (edgeError) {
+        logger.warn(`❌ Edge TTS failed: ${edgeError.message}`);
+        throw edgeError;
+      }
 
-      // If we get here, all methods failed
-      throw new Error('All TTS methods failed - neither Microsoft Speech SDK nor browser TTS available');
+      // If we get here, Edge TTS failed
+      throw new Error('Edge TTS synthesis failed');
 
     } catch (error) {
-      logger.error(`TTS synthesis failed: ${error.message}`, { voice, textLength: text.length });
+      logger.error(`TTS synthesis failed: ${error.message}`);
       throw error;
     }
   }
 
-  // Synthesize movie overview/description
   async synthesizeMovieOverview(movieTitle, overview, voiceName = null) {
     if (!overview || overview.trim().length === 0) {
       throw new Error('Movie overview is required');
     }
 
-    // Prepare text for better speech synthesis (no intro text to avoid caching conflicts)
-    const cleanText = this.prepareTextForSpeech(overview);
+    // Clean text for better speech synthesis
+    const cleanText = overview.replace(/\s+/g, ' ').trim();
     
-    // TEMPORARILY DISABLE CACHING TO DEBUG
-    logger.info(`🎬 Movie overview TTS for: "${movieTitle}"`);
-    logger.info(`📝 Overview text: "${cleanText.substring(0, 100)}..."`);
-    logger.info(`📏 Overview length: ${cleanText.length} characters`);
+    logger.info(`🎬 Movie overview TTS for: "${movieTitle}" (${cleanText.length} chars)`);
     
-    // Synthesize without any caching to test if the issue is caching-related
-    const audioBase64 = await this.synthesizeText(cleanText, voiceName);
-    
-    logger.info(`✅ Generated fresh audio for: ${movieTitle}`);
-    return audioBase64;
+    return this.synthesizeText(cleanText, voiceName);
   }
 
-  // Prepare text for better speech synthesis
-  prepareTextForSpeech(text) {
-    return text
-      // Remove excessive whitespace
-      .replace(/\s+/g, ' ')
-      // Add pauses after sentences
-      .replace(/\. /g, '. ')
-      // Handle common abbreviations
-      .replace(/\bDr\./g, 'Doctor')
-      .replace(/\bMr\./g, 'Mister')
-      .replace(/\bMrs\./g, 'Missus')
-      .replace(/\bMs\./g, 'Miss')
-      // Clean up
-      .trim();
-  }
-
-  // Get service status
   getStatus() {
     return {
       initialized: this.isInitialized,
       voicesAvailable: this.availableVoices.length,
       defaultVoice: this.defaultVoice,
-      englishVoices: this.getEnglishVoices().length
+      englishVoices: this.getEnglishVoices().length,
+      edgeTTSAvailable: edgeTTSInstance !== null
     };
   }
 }
