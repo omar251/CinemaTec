@@ -315,6 +315,12 @@ export function showMovieDetailsModal(node) {
                                 <strong style="color: var(--gemini-accent);">Network Depth:</strong>
                                 <div style="color: var(--text-color);">📊 Level ${node.depth}</div>
                             </div>
+                            ${details.ids?.imdb ? `
+                            <div class="info-item">
+                                <strong style="color: var(--gemini-accent);">IMDb ID:</strong>
+                                <div style="color: var(--text-color);"><a href="https://www.imdb.com/title/${details.ids.imdb}" target="_blank" style="color: var(--text-color); text-decoration: underline;">${details.ids.imdb}</a></div>
+                            </div>
+                            ` : ''}
                         </div>
                         
                         <div style="margin-bottom: 15px;">
@@ -379,22 +385,51 @@ export function showMovieDetailsModal(node) {
                     ` : ''}
                 </div>
 
-                ${details.trailer ? `
+                ${details.trailer || (details.ids?.imdb || details.ids?.tmdb) ? `
                     <div style="margin-bottom: 20px;">
-                        <strong style="color: var(--gemini-accent);">Trailer:</strong>
-                        <div style="margin-top: 8px;">
-                            <a href="${details.trailer}" target="_blank" class="trailer-link" style="
-                                color: var(--accent-color);
-                                text-decoration: none;
-                                padding: 8px 16px;
-                                background: var(--glass-bg);
-                                border-radius: 8px;
-                                border: 1px solid var(--accent-color);
-                                display: inline-block;
-                                transition: all 0.2s;
-                            ">
-                                🎥 Watch Trailer
-                            </a>
+                        <strong style="color: var(--gemini-accent);">Links:</strong>
+                        <div style="margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            ${details.trailer ? `
+                                <a href="${details.trailer}" target="_blank" class="trailer-link" style="
+                                    color: var(--accent-color);
+                                    text-decoration: none;
+                                    padding: 8px 16px;
+                                    background: var(--glass-bg);
+                                    border-radius: 8px;
+                                    border: 1px solid var(--accent-color);
+                                    display: inline-block;
+                                    transition: all 0.2s;
+                                ">
+                                    🎥 Watch Trailer
+                                </a>
+                            ` : ''}
+                            ${details.ids?.imdb ? `
+                                <a href="https://vidsrc.xyz/embed/movie?imdb=${details.ids.imdb}" target="_blank" class="vidsrc-link" style="
+                                    color: var(--success-color);
+                                    text-decoration: none;
+                                    padding: 8px 16px;
+                                    background: var(--glass-bg);
+                                    border-radius: 8px;
+                                    border: 1px solid var(--success-color);
+                                    display: inline-block;
+                                    transition: all 0.2s;
+                                ">
+                                    ▶️ Watch on Vidsrc (IMDb)
+                                </a>
+                            ` : details.ids?.tmdb ? `
+                                <a href="https://vidsrc.xyz/embed/movie?tmdb=${details.ids.tmdb}" target="_blank" class="vidsrc-link" style="
+                                    color: var(--success-color);
+                                    text-decoration: none;
+                                    padding: 8px 16px;
+                                    background: var(--glass-bg);
+                                    border-radius: 8px;
+                                    border: 1px solid var(--success-color);
+                                    display: inline-block;
+                                    transition: all 0.2s;
+                                ">
+                                    ▶️ Watch on Vidsrc (TMDB)
+                                </a>
+                            ` : ''}
                         </div>
                     </div>
                 ` : ''}
