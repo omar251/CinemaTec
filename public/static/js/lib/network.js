@@ -465,21 +465,27 @@ export class DynamicMovieNetwork {
         ui.showLoading(true);
         
         try {
+            console.log(`🎬 Loading details for movie: ${node.title} (${node.year})`);
+            
             // Load full details if not already loaded
             if (!node.fullDetails) {
                 const fullDetails = await api.getFullMovieDetails(node.traktId);
-                if (fullDetails) {
-                    node.fullDetails = fullDetails;
+                if (fullDetails && fullDetails.success) {
+                    console.log(`✅ Movie details loaded from: ${fullDetails.source}`);
+                    node.fullDetails = fullDetails.movie;
                     ui.updateSidebar(this.nodes);
+                } else {
+                    console.log(`⚠️ No full details available, using basic data`);
                 }
-
             }
             
             // Show detailed movie modal
+            console.log(`🎭 Opening movie details modal for: ${node.title}`);
             ui.showMovieDetailsModal(node);
             
         } catch (error) {
-            ui.showNotification('Failed to load movie details', 'error');
+            console.error('Failed to show movie details:', error);
+            ui.showNotification(`Failed to load movie details: ${error.message}`, 'error');
         } finally {
             ui.showLoading(false);
         }
