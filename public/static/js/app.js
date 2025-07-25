@@ -550,8 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-top: 5px;
             max-height: 400px;
             overflow-y: auto;
-            z-index: 1000;
+            z-index: 1001;
             display: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         `;
         searchContainer.appendChild(dropdown);
     }
