@@ -466,9 +466,11 @@ export class DynamicMovieNetwork {
         
         try {
             console.log(`🎬 Loading details for movie: ${node.title} (${node.year})`);
+            console.log(`🔍 Current fullDetails status:`, !!node.fullDetails);
             
             // Load full details if not already loaded
             if (!node.fullDetails) {
+                console.log(`📥 No fullDetails found, fetching from API/database...`);
                 const fullDetails = await api.getFullMovieDetails(node.traktId);
                 if (fullDetails && fullDetails.success) {
                     console.log(`✅ Movie details loaded from: ${fullDetails.source}`);
@@ -477,10 +479,13 @@ export class DynamicMovieNetwork {
                 } else {
                     console.log(`⚠️ No full details available, using basic data`);
                 }
+            } else {
+                console.log(`✅ Using existing fullDetails for: ${node.title}`);
             }
             
             // Show detailed movie modal
             console.log(`🎭 Opening movie details modal for: ${node.title}`);
+            console.log(`📊 Final fullDetails status:`, !!node.fullDetails);
             ui.showMovieDetailsModal(node);
             
         } catch (error) {
@@ -493,19 +498,49 @@ export class DynamicMovieNetwork {
 
     async loadMovieDetails(nodeId) {
         const node = this.nodes.find(n => n.id === nodeId);
-        if (!node || node.fullDetails) return;
+        
+        console.log(`🔧 DEBUG loadMovieDetails called for nodeId: ${nodeId}`);
+        console.log(`🔧 DEBUG node found:`, !!node);
+        console.log(`🔧 DEBUG node.fullDetails:`, !!node?.fullDetails);
+        
+        if (!node) {
+            console.log(`❌ Node not found: ${nodeId}`);
+            ui.showNotification(`Movie not found`, 'error');
+            return;
+        }
+        
+        if (node.fullDetails) {
+            console.log(`⚠️ Node already has details: ${node.title}`);
+            ui.showNotification(`${node.title} already has full details`, 'info');
+            return;
+        }
 
         ui.showLoading(true);
+        console.log(`🔄 Loading missing details for: ${node.title} (${node.year})`);
         
         try {
             const fullDetails = await api.getFullMovieDetails(node.traktId);
-            if (fullDetails) {
-                node.fullDetails = fullDetails;
+            console.log(`🔧 DEBUG fullDetails response:`, fullDetails);
+            
+            if (fullDetails && fullDetails.success) {
+                console.log(`✅ Details loaded from: ${fullDetails.source}`);
+                node.fullDetails = fullDetails.movie;
+                console.log(`🔧 DEBUG node.fullDetails after assignment:`, !!node.fullDetails);
                 ui.updateSidebar(this.nodes);
                 ui.showNotification(`Loaded details for ${node.title}`, 'success');
+            } else if (fullDetails) {
+                // Handle case where we got some data but not full details
+                console.log(`⚠️ Partial details loaded for: ${node.title}`);
+                node.fullDetails = fullDetails;
+                ui.updateSidebar(this.nodes);
+                ui.showNotification(`Loaded available details for ${node.title}`, 'warning');
+            } else {
+                console.log(`❌ No details available for: ${node.title}`);
+                ui.showNotification(`No additional details available for ${node.title}`, 'warning');
             }
         } catch (error) {
-            ui.showNotification('Failed to load movie details', 'error');
+            console.error('Failed to load movie details:', error);
+            ui.showNotification(`Failed to load details for ${node.title}: ${error.message}`, 'error');
         } finally {
             ui.showLoading(false);
         }

@@ -132,6 +132,22 @@ function renderSidebarMovies(nodes) {
                     " title="${node.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
                         ${node.isFavorite ? '❤️' : '🤍'}
                     </button>
+                    ${!node.fullDetails ? `
+                    <button class="load-details" data-node-id="${node.id}" style="
+                        padding: 8px 12px;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--warning-color, #f39c12);
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        color: var(--warning-color, #f39c12);
+                        text-align: center;
+                        transition: all 0.2s;
+                        font-weight: 500;
+                    " title="Load missing movie details from database">
+                        📄 Load
+                    </button>
+                    ` : ''}
                     <div class="view-details-btn" data-node-id="${node.id}" style="
                         flex: 1;
                         padding: 8px 12px;
@@ -177,6 +193,9 @@ function renderSidebarMovies(nodes) {
     
     // Setup favorite button event listeners
     setupFavoriteButtonListeners();
+    
+    // Setup load details button event listeners
+    setupLoadDetailsButtonListeners();
 }
 
 function setupRemoveButtonListeners() {
@@ -204,6 +223,22 @@ function setupFavoriteButtonListeners() {
                     // Re-render sidebar to update the button appearance
                     renderSidebarMovies(allNodes);
                 }
+            }
+        });
+    });
+}
+
+function setupLoadDetailsButtonListeners() {
+    const loadDetailsButtons = document.querySelectorAll('.load-details');
+    loadDetailsButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering movie item click
+            const nodeId = parseInt(e.currentTarget.dataset.nodeId);
+            console.log(`🔧 Load details button clicked for nodeId: ${nodeId}`);
+            if (!isNaN(nodeId) && window.network) {
+                window.network.loadMovieDetails(nodeId);
+            } else {
+                console.error('❌ Network not available or invalid nodeId:', nodeId);
             }
         });
     });
