@@ -16,8 +16,61 @@ export function showNotification(message, type = 'success') {
 
 let allNodes = []; // Store all nodes for filtering
 
+// Favorite management functions
+function getFavorites() {
+    const favorites = localStorage.getItem('movieFavorites');
+    return favorites ? JSON.parse(favorites) : [];
+}
+
+function saveFavorites(favorites) {
+    localStorage.setItem('movieFavorites', JSON.stringify(favorites));
+}
+
+function toggleFavorite(node) {
+    const favorites = getFavorites();
+    const movieKey = `${node.title}_${node.year}`;
+    
+    if (node.isFavorite) {
+        // Remove from favorites
+        const index = favorites.findIndex(fav => fav.movieKey === movieKey);
+        if (index > -1) {
+            favorites.splice(index, 1);
+        }
+        node.isFavorite = false;
+        showNotification(`Removed "${node.title}" from favorites`, 'info');
+    } else {
+        // Add to favorites
+        const favoriteData = {
+            movieKey: movieKey,
+            title: node.title,
+            year: node.year,
+            traktId: node.traktId,
+            addedAt: new Date().toISOString()
+        };
+        favorites.push(favoriteData);
+        node.isFavorite = true;
+        showNotification(`Added "${node.title}" to favorites`, 'success');
+    }
+    
+    saveFavorites(favorites);
+    
+    // Dispatch event to update network visualization
+    document.dispatchEvent(new CustomEvent('favoritesUpdated', { detail: { node } }));
+}
+
+function initializeFavorites(nodes) {
+    const favorites = getFavorites();
+    const favoriteKeys = new Set(favorites.map(fav => fav.movieKey));
+    
+    nodes.forEach(node => {
+        const movieKey = `${node.title}_${node.year}`;
+        node.isFavorite = favoriteKeys.has(movieKey);
+    });
+}
+
 export function updateSidebar(nodes) {
     allNodes = nodes; // Store nodes globally for search
+    initializeFavorites(nodes); // Initialize favorite status
     renderSidebarMovies(nodes);
 }
 
@@ -49,9 +102,11 @@ function renderSidebarMovies(nodes) {
         const watchers = details.stats?.watchers ? `${(details.stats.watchers / 1000).toFixed(0)}K` : '';
         
         return `
-            <div class="movie-item" data-node-id="${node.id}">
+            <div class="movie-item ${node.isFavorite ? 'favorite-movie' : ''}" data-node-id="${node.id}">
                 <div class="movie-header">
-                    <div class="movie-title">${node.title}</div>
+                    <div class="movie-title">
+                        ${node.isFavorite ? '❤️ ' : ''}${node.title}
+                    </div>
                     <div class="movie-rating">${rating}</div>
                 </div>
                 <div class="movie-meta">
@@ -63,6 +118,20 @@ function renderSidebarMovies(nodes) {
                 <div class="movie-depth">Depth: ${node.depth}</div>
                 
                 <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="favorite-toggle-btn" data-node-id="${node.id}" style="
+                        padding: 8px 12px;
+                        background: ${node.isFavorite ? 'var(--accent-color)' : 'var(--glass-bg)'};
+                        border: 1px solid var(--accent-color);
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        color: ${node.isFavorite ? 'white' : 'var(--accent-color)'};
+                        text-align: center;
+                        transition: all 0.2s;
+                        font-weight: 500;
+                    " title="${node.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        ${node.isFavorite ? '❤️' : '🤍'}
+                    </button>
                     <div class="view-details-btn" data-node-id="${node.id}" style="
                         flex: 1;
                         padding: 8px 12px;
@@ -105,6 +174,9 @@ function renderSidebarMovies(nodes) {
 
     // Setup remove button event listeners
     setupRemoveButtonListeners();
+    
+    // Setup favorite button event listeners
+    setupFavoriteButtonListeners();
 }
 
 function setupRemoveButtonListeners() {
@@ -114,6 +186,24 @@ function setupRemoveButtonListeners() {
             const nodeId = parseInt(e.currentTarget.dataset.nodeId);
             if (!isNaN(nodeId)) {
                 document.dispatchEvent(new CustomEvent('removeNode', { detail: { nodeId } }));
+            }
+        });
+    });
+}
+
+function setupFavoriteButtonListeners() {
+    const favoriteButtons = document.querySelectorAll('.favorite-toggle-btn');
+    favoriteButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering movie item click
+            const nodeId = parseInt(e.currentTarget.dataset.nodeId);
+            if (!isNaN(nodeId)) {
+                const node = allNodes.find(n => n.id === nodeId);
+                if (node) {
+                    toggleFavorite(node);
+                    // Re-render sidebar to update the button appearance
+                    renderSidebarMovies(allNodes);
+                }
             }
         });
     });
@@ -472,6 +562,13 @@ export function showMovieDetailsModal(node) {
                 ` : ''}
             </div>
             <div class="modal-footer">
+                <button class="control-btn ${node.isFavorite ? 'favorite-active' : ''}" id="favoriteBtn" data-node-id="${node.id}" style="
+                    background: ${node.isFavorite ? 'var(--accent-color)' : 'var(--glass-bg)'};
+                    border: 1px solid var(--accent-color);
+                    color: ${node.isFavorite ? 'white' : 'var(--accent-color)'};
+                ">
+                    ${node.isFavorite ? '❤️ Remove Favorite' : '🤍 Add Favorite'}
+                </button>
                 <button class="control-btn primary" id="expandNodeBtn" data-node-id="${node.id}">
                     🔗 Add Related Movies
                 </button>
@@ -486,6 +583,7 @@ export function showMovieDetailsModal(node) {
     const closeBtn = document.getElementById('closeMovieDetailsBtn');
     const closeFooterBtn = document.getElementById('closeMovieDetailsFooterBtn');
     const expandBtn = document.getElementById('expandNodeBtn');
+    const favoriteBtn = document.getElementById('favoriteBtn');
 
     const closeModal = () => {
         modal.style.display = 'none';
@@ -505,6 +603,26 @@ export function showMovieDetailsModal(node) {
             // Trigger expansion - we'll need to access the network instance
             const event = new CustomEvent('expandNode', { detail: { nodeId: node.id } });
             document.dispatchEvent(event);
+        });
+    }
+
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', () => {
+            toggleFavorite(node);
+            // Update the button appearance
+            if (node.isFavorite) {
+                favoriteBtn.textContent = '❤️ Remove Favorite';
+                favoriteBtn.style.background = 'var(--accent-color)';
+                favoriteBtn.style.color = 'white';
+                favoriteBtn.classList.add('favorite-active');
+            } else {
+                favoriteBtn.textContent = '🤍 Add Favorite';
+                favoriteBtn.style.background = 'var(--glass-bg)';
+                favoriteBtn.style.color = 'var(--accent-color)';
+                favoriteBtn.classList.remove('favorite-active');
+            }
+            // Trigger sidebar update to show favorite indicator
+            updateSidebar(allNodes);
         });
     }
 
