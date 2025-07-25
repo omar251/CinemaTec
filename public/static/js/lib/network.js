@@ -563,10 +563,10 @@ export class DynamicMovieNetwork {
                 .domain([0, 1, 2, 3])
                 .range(['#e94560', '#f6e05e', '#10b981', '#3b82f6']),
             
-            // Rating-based coloring (poor to excellent)
-            rating: d3.scaleSequential()
-                .domain([0, 10])
-                .interpolator(d3.interpolateRdYlGn),
+            // Rating-based coloring (poor to excellent) - More defined excellent range
+            rating: d3.scaleThreshold()
+                .domain([5, 7, 8.5])
+                .range(['#d73027', '#fee08b', '#74c476', '#238b45']),
             
             // Genre-based coloring
             genre: d3.scaleOrdinal()
@@ -1261,9 +1261,10 @@ export class DynamicMovieNetwork {
                 return stableKey;
                 
             case 'rating':
-                // "Excellent (7-10)" -> determine range
+                // "Excellent (8.5-10)" -> determine range
                 if (stableKey.includes('Poor')) return 'poor';
                 if (stableKey.includes('Average')) return 'average';
+                if (stableKey.includes('Good')) return 'good';
                 if (stableKey.includes('Excellent')) return 'excellent';
                 return stableKey;
                 
@@ -1461,15 +1462,18 @@ export class DynamicMovieNetwork {
                 break;
                 
             case 'rating':
-                // Show rating ranges based on actual data
+                // Show rating ranges based on actual data with more defined excellent range
                 if (dataAnalysis.ratingRanges.poor > 0) {
-                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(2)};"></span> Poor (0-3) - ${dataAnalysis.ratingRanges.poor} movies</div>`;
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #d73027;"></span> Poor (0-5) - ${dataAnalysis.ratingRanges.poor} movies</div>`;
                 }
                 if (dataAnalysis.ratingRanges.average > 0) {
-                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(5)};"></span> Average (4-6) - ${dataAnalysis.ratingRanges.average} movies</div>`;
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #fee08b;"></span> Average (5-7) - ${dataAnalysis.ratingRanges.average} movies</div>`;
+                }
+                if (dataAnalysis.ratingRanges.good > 0) {
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #74c476;"></span> Good (7-8.5) - ${dataAnalysis.ratingRanges.good} movies</div>`;
                 }
                 if (dataAnalysis.ratingRanges.excellent > 0) {
-                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: ${this.colorScales.rating(8)};"></span> Excellent (7-10) - ${dataAnalysis.ratingRanges.excellent} movies</div>`;
+                    legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #238b45;"></span> Excellent (8.5-10) - ${dataAnalysis.ratingRanges.excellent} movies</div>`;
                 }
                 if (dataAnalysis.missingRatings > 0) {
                     legendHTML += `<div class="legend-item"><span class="legend-color" style="background: #666666;"></span> No rating data (${dataAnalysis.missingRatings} movies)</div>`;
@@ -1527,7 +1531,7 @@ export class DynamicMovieNetwork {
             genreCounts: {},
             decades: new Set(),
             decadeCounts: {},
-            ratingRanges: { poor: 0, average: 0, excellent: 0 },
+            ratingRanges: { poor: 0, average: 0, good: 0, excellent: 0 },
             popularityRanges: { low: 0, medium: 0, high: 0, very_popular: 0 },
             runtimeRanges: { short: 0, medium: 0, long: 0, very_long: 0 },
             missingGenres: 0,
@@ -1561,10 +1565,11 @@ export class DynamicMovieNetwork {
             analysis.decades.add(decade);
             analysis.decadeCounts[decade] = (analysis.decadeCounts[decade] || 0) + 1;
             
-            // Analyze ratings
+            // Analyze ratings - More defined excellent range
             if (details.rating) {
-                if (details.rating <= 3) analysis.ratingRanges.poor++;
-                else if (details.rating <= 6) analysis.ratingRanges.average++;
+                if (details.rating < 5) analysis.ratingRanges.poor++;
+                else if (details.rating < 7) analysis.ratingRanges.average++;
+                else if (details.rating < 8.5) analysis.ratingRanges.good++;
                 else analysis.ratingRanges.excellent++;
             } else {
                 analysis.missingRatings++;
@@ -1674,9 +1679,10 @@ export class DynamicMovieNetwork {
                 if (!rating) return false;
                 
                 switch (filterValue) {
-                    case 'poor': return rating <= 3;
-                    case 'average': return rating > 3 && rating <= 6;
-                    case 'excellent': return rating > 6;
+                    case 'poor': return rating < 5;
+                    case 'average': return rating >= 5 && rating < 7;
+                    case 'good': return rating >= 7 && rating < 8.5;
+                    case 'excellent': return rating >= 8.5;
                 }
                 break;
                 
