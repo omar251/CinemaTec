@@ -13,6 +13,7 @@ const healthRoutes = require('./health');
 const cacheRoutes = require('./cache');
 const ttsRoutes = require('./tts');
 const databaseRoutes = require('./database');
+const importRoutes = require('./import');
 
 // Mount routes
 router.use('/search', searchRoutes);
@@ -23,6 +24,7 @@ router.use('/cache', cacheRoutes);
 router.use('/health', healthRoutes);
 router.use('/tts', ttsRoutes);
 router.use('/database', databaseRoutes);
+router.use('/import', importRoutes);
 
 // Root API endpoint
 router.get('/', (req, res) => {
@@ -36,7 +38,8 @@ router.get('/', (req, res) => {
       ai: '/api/ai',
       cache: '/api/cache',
       tts: '/api/tts',
-      database: '/api/database'
+      database: '/api/database',
+      import: '/api/import'
     },
     documentation: 'See /docs/api/ for detailed API documentation'
   });

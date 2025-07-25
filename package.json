@@ -13,6 +13,7 @@
     "test-cache": "node scripts/test_movie_cache.js",
     "quick-start": "node scripts/start_node.js",
     "generate-network": "node scripts/network_generator.js",
+    "import-movies": "node scripts/import_movies.js",
     "setup": "npm install && echo 'Copy .env.example to .env and add your API keys'"
   },
   "keywords": [
