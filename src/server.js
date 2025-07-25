@@ -1,5 +1,5 @@
 /**
- * CinemaTec Movie Network Explorer - Refactored Server
+ * CinemaTec Explorer - Refactored Server
  * Clean, modular architecture with separation of concerns
  */
 const express = require('express');
@@ -26,7 +26,7 @@ class Server {
   }
 
   setupServer() {
-    logger.info('🚀 Initializing CinemaTec Movie Network Explorer');
+    logger.info('🚀 Initializing CinemaTec Explorer');
     
     // Setup middleware
     setupMiddleware(this.app);
@@ -66,7 +66,7 @@ class Server {
     return new Promise((resolve, reject) => {
       try {
         this.server = this.app.listen(this.port, this.host, () => {
-          logger.info(`🎬 CinemaTec Movie Network Explorer server running on port ${this.port}`);
+          logger.info(`🎬 CinemaTec Explorer server running on port ${this.port}`);
           logger.info(`🌐 Frontend: http://localhost:${this.port}`);
           logger.info(`📡 API: http://localhost:${this.port}/api`);
           logger.info(`🏥 Health: http://localhost:${this.port}/api/health`);

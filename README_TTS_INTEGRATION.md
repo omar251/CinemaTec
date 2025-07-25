@@ -1,8 +1,8 @@
-# Edge TTS Integration for CinemaTec Movie Network Explorer
+# Edge TTS Integration for CinemaTec Explorer
 
 ## Overview
 
-Successfully integrated `@andresaya/edge-tts` package to provide text-to-speech functionality for movie descriptions and overviews in the CinemaTec Movie Network Explorer.
+Successfully integrated `@andresaya/edge-tts` package to provide text-to-speech functionality for movie descriptions and overviews in the CinemaTec Explorer.
 
 ## Features Added
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CinemaTec Movie Network Explorer now includes high-quality text-to-speech functionality using Microsoft Edge TTS. Users can listen to movie overviews with natural-sounding neural voices.
+The CinemaTec Explorer now includes high-quality text-to-speech functionality using Microsoft Edge TTS. Users can listen to movie overviews with natural-sounding neural voices.
 
 ## Features
 

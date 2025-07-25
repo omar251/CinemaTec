@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Startup script for the CinemaTec Movie Network Explorer
+Startup script for the CinemaTec Explorer
 """
 import os
 import sys
@@ -98,7 +98,7 @@ def open_frontend(backend_port):
 
 def main():
     """Main startup function."""
-    print("🎬 CinemaTec Movie Network Explorer - Startup Script")
+    print("🎬 CinemaTec Explorer - Startup Script")
     print("=" * 50)
     
     # Check requirements
