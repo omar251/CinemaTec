@@ -1,302 +1,423 @@
 /**
- * Movie Data Service
- * Handles persistent JSON-based caching of movie data for performance optimization
+ * Database-First Movie Data Service
+ * Uses PostgreSQL database as the primary local caching system instead of JSON files
  */
-const fs = require('fs').promises;
-const path = require('path');
-const config = require('../config');
+const databaseService = require('./databaseService');
 const logger = require('../utils/logger');
 
 class MovieDataService {
-  constructor() {
-    this.cacheDir = path.join(config.storage.dataDir, 'movie_cache');
-    this.movieDataFile = path.join(this.cacheDir, 'movies.json');
-    this.movieData = new Map();
-    this.isDirty = false;
-    this.saveInterval = null;
-    
-    this.initializeStorage();
-    logger.info('Movie Data Service initialized');
-  }
-
-  async initializeStorage() {
-    try {
-      // Create cache directory if it doesn't exist
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      
-      // Load existing movie data
-      await this.loadMovieData();
-      
-      // Start auto-save interval (save every 5 minutes if dirty)
-      this.startAutoSave();
-      
-      logger.info(`Movie data cache initialized with ${this.movieData.size} movies`);
-    } catch (error) {
-      logger.error(`Failed to initialize movie data storage: ${error.message}`);
-    }
-  }
-
-  async loadMovieData() {
-    try {
-      const data = await fs.readFile(this.movieDataFile, 'utf8');
-      const movieArray = JSON.parse(data);
-      
-      // Convert array back to Map for efficient lookups
-      this.movieData.clear();
-      movieArray.forEach(movie => {
-        const key = this.generateMovieKey(movie.ids.trakt, movie.title, movie.year);
-        this.movieData.set(key, {
-          ...movie,
-          cachedAt: new Date(movie.cachedAt),
-          lastAccessed: new Date()
-        });
-      });
-      
-      logger.info(`Loaded ${this.movieData.size} movies from cache`);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        logger.info('No existing movie cache found, starting fresh');
-      } else {
-        logger.error(`Failed to load movie data: ${error.message}`);
-      }
-    }
-  }
-
-  async saveMovieData() {
-    if (!this.isDirty) return;
-    
-    try {
-      // Convert Map to array for JSON serialization
-      const movieArray = Array.from(this.movieData.values()).map(movie => ({
-        ...movie,
-        cachedAt: movie.cachedAt.toISOString(),
-        lastAccessed: movie.lastAccessed.toISOString()
-      }));
-      
-      const jsonData = JSON.stringify(movieArray, null, 2);
-      await fs.writeFile(this.movieDataFile, jsonData, 'utf8');
-      
-      this.isDirty = false;
-      logger.debug(`Saved ${movieArray.length} movies to cache`);
-    } catch (error) {
-      logger.error(`Failed to save movie data: ${error.message}`);
-    }
-  }
-
-  startAutoSave() {
-    // Save every 5 minutes if there are changes
-    this.saveInterval = setInterval(async () => {
-      if (this.isDirty) {
-        await this.saveMovieData();
-      }
-    }, 5 * 60 * 1000);
-  }
-
-  generateMovieKey(traktId, title, year) {
-    return `${traktId}_${title}_${year}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-  }
-
-  // Store movie data
-  storeMovie(movieData) {
-    if (!movieData || !movieData.ids || !movieData.ids.trakt) {
-      logger.warn('Invalid movie data provided to storeMovie');
-      return false;
+    constructor() {
+        this.memoryCache = new Map(); // Small in-memory cache for frequently accessed movies
+        this.maxMemoryCacheSize = 100; // Limit memory cache size
+        this.cacheHitStats = {
+            memory: 0,
+            database: 0,
+            miss: 0
+        };
+        
+        logger.info('🎬 Database-first Movie Data Service initialized');
     }
 
-    const key = this.generateMovieKey(movieData.ids.trakt, movieData.title, movieData.year);
-    const now = new Date();
-    
-    const cacheEntry = {
-      ...movieData,
-      cachedAt: now,
-      lastAccessed: now,
-      cacheVersion: '1.0'
-    };
-
-    this.movieData.set(key, cacheEntry);
-    this.isDirty = true;
-    
-    logger.debug(`Stored movie: ${movieData.title} (${movieData.year})`);
-    return true;
-  }
-
-  // Retrieve movie data
-  getMovie(traktId, title = null, year = null) {
-    // Try to find by traktId first
-    let movie = null;
-    
-    if (title && year) {
-      const key = this.generateMovieKey(traktId, title, year);
-      movie = this.movieData.get(key);
-    }
-    
-    // Fallback: search by traktId only
-    if (!movie) {
-      for (const [key, movieData] of this.movieData.entries()) {
-        if (movieData.ids.trakt === traktId) {
-          movie = movieData;
-          break;
+    /**
+     * Store a movie in the database (primary cache)
+     */
+    async storeMovie(movieData) {
+        try {
+            // Transform the movie data to match database format if needed
+            const transformedMovie = this.transformMovieForDatabase(movieData);
+            
+            // Save to database
+            const movieKey = await databaseService.saveMovie(transformedMovie);
+            
+            // Also cache in memory for quick access
+            this.addToMemoryCache(movieKey, transformedMovie);
+            
+            logger.debug(`📦 Stored movie in database: ${movieData.title} (${movieData.year})`);
+            return movieKey;
+        } catch (error) {
+            logger.error(`Failed to store movie ${movieData.title}:`, error.message);
+            throw error;
         }
-      }
     }
 
-    if (movie) {
-      // Update last accessed time
-      movie.lastAccessed = new Date();
-      this.isDirty = true;
-      
-      logger.debug(`Retrieved movie from cache: ${movie.title} (${movie.year})`);
-      return { ...movie }; // Return a copy to prevent external modifications
+    /**
+     * Get a movie by various identifiers (database-first approach)
+     */
+    async getMovie(traktId, title, year) {
+        try {
+            // Try memory cache first for speed
+            const memoryKey = this.generateMemoryKey(traktId, title, year);
+            if (this.memoryCache.has(memoryKey)) {
+                this.cacheHitStats.memory++;
+                logger.debug(`🚀 Memory cache hit: ${title || traktId}`);
+                return this.memoryCache.get(memoryKey);
+            }
+
+            // Try database cache
+            let movie = null;
+            
+            if (traktId) {
+                movie = await this.getMovieByTraktId(traktId);
+            } else if (title && year) {
+                movie = await this.getMovieByTitleYear(title, year);
+            }
+
+            if (movie) {
+                this.cacheHitStats.database++;
+                this.addToMemoryCache(memoryKey, movie);
+                logger.debug(`💾 Database cache hit: ${title || traktId}`);
+                return movie;
+            }
+
+            this.cacheHitStats.miss++;
+            logger.debug(`❌ Cache miss: ${title || traktId}`);
+            return null;
+        } catch (error) {
+            logger.error(`Error getting movie ${title || traktId}:`, error.message);
+            return null;
+        }
     }
 
-    return null;
-  }
+    /**
+     * Get movie by Trakt ID
+     */
+    async getMovieByTraktId(traktId) {
+        try {
+            const query = `
+                SELECT m.*, 
+                       array_agg(DISTINCT mg.genre_name) FILTER (WHERE mg.genre_name IS NOT NULL) as genres,
+                       array_agg(DISTINCT ml.language_code) FILTER (WHERE ml.language_code IS NOT NULL) as languages
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.movie_key = mg.movie_key
+                LEFT JOIN movie_languages ml ON m.movie_key = ml.movie_key
+                WHERE m.trakt_id = $1
+                GROUP BY m.movie_key
+                LIMIT 1
+            `;
+            
+            const result = await databaseService.query(query, [traktId]);
+            
+            if (result.rows.length === 0) {
+                return null;
+            }
 
-  // Check if movie exists in cache
-  hasMovie(traktId, title = null, year = null) {
-    return this.getMovie(traktId, title, year) !== null;
-  }
-
-  // Store multiple movies (bulk operation)
-  storeMovies(movieArray) {
-    if (!Array.isArray(movieArray)) {
-      logger.warn('storeMovies expects an array');
-      return 0;
+            return this.formatMovieFromDb(result.rows[0]);
+        } catch (error) {
+            logger.error(`Failed to get movie by Trakt ID ${traktId}:`, error.message);
+            return null;
+        }
     }
 
-    let stored = 0;
-    movieArray.forEach(movie => {
-      if (this.storeMovie(movie)) {
-        stored++;
-      }
-    });
+    /**
+     * Get movie by title and year
+     */
+    async getMovieByTitleYear(title, year) {
+        try {
+            const query = `
+                SELECT m.*, 
+                       array_agg(DISTINCT mg.genre_name) FILTER (WHERE mg.genre_name IS NOT NULL) as genres,
+                       array_agg(DISTINCT ml.language_code) FILTER (WHERE ml.language_code IS NOT NULL) as languages
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.movie_key = mg.movie_key
+                LEFT JOIN movie_languages ml ON m.movie_key = ml.movie_key
+                WHERE LOWER(m.title) = LOWER($1) AND m.year = $2
+                GROUP BY m.movie_key
+                LIMIT 1
+            `;
+            
+            const result = await databaseService.query(query, [title, year]);
+            
+            if (result.rows.length === 0) {
+                return null;
+            }
 
-    logger.info(`Bulk stored ${stored} movies`);
-    return stored;
-  }
-
-  // Get multiple movies by traktIds
-  getMovies(traktIds) {
-    if (!Array.isArray(traktIds)) {
-      return [];
+            return this.formatMovieFromDb(result.rows[0]);
+        } catch (error) {
+            logger.error(`Failed to get movie by title/year ${title} (${year}):`, error.message);
+            return null;
+        }
     }
 
-    const movies = [];
-    traktIds.forEach(traktId => {
-      const movie = this.getMovie(traktId);
-      if (movie) {
-        movies.push(movie);
-      }
-    });
+    /**
+     * Get multiple movies by Trakt IDs
+     */
+    async getMovies(traktIds) {
+        try {
+            if (!Array.isArray(traktIds) || traktIds.length === 0) {
+                return [];
+            }
 
-    return movies;
-  }
-
-  // Search movies by title (fuzzy search)
-  searchMovies(query, limit = 10) {
-    const results = [];
-    const searchTerm = query.toLowerCase();
-
-    for (const movie of this.movieData.values()) {
-      if (movie.title.toLowerCase().includes(searchTerm)) {
-        results.push({ ...movie });
-        if (results.length >= limit) break;
-      }
+            const placeholders = traktIds.map((_, index) => `$${index + 1}`).join(',');
+            const query = `
+                SELECT m.*, 
+                       array_agg(DISTINCT mg.genre_name) FILTER (WHERE mg.genre_name IS NOT NULL) as genres,
+                       array_agg(DISTINCT ml.language_code) FILTER (WHERE ml.language_code IS NOT NULL) as languages
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.movie_key = mg.movie_key
+                LEFT JOIN movie_languages ml ON m.movie_key = ml.movie_key
+                WHERE m.trakt_id IN (${placeholders})
+                GROUP BY m.movie_key
+                ORDER BY m.last_accessed DESC
+            `;
+            
+            const result = await databaseService.query(query, traktIds);
+            return result.rows.map(row => this.formatMovieFromDb(row));
+        } catch (error) {
+            logger.error(`Failed to get movies by IDs:`, error.message);
+            return [];
+        }
     }
 
-    return results.sort((a, b) => {
-      // Sort by relevance (exact matches first, then by rating)
-      const aExact = a.title.toLowerCase() === searchTerm;
-      const bExact = b.title.toLowerCase() === searchTerm;
-      
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      
-      return (b.rating || 0) - (a.rating || 0);
-    });
-  }
-
-  // Get cache statistics
-  getStats() {
-    const now = new Date();
-    const oneHour = 60 * 60 * 1000;
-    const oneDay = 24 * oneHour;
-    const oneWeek = 7 * oneDay;
-
-    let recentlyAccessed = 0;
-    let oldEntries = 0;
-    let totalSize = 0;
-
-    for (const movie of this.movieData.values()) {
-      const timeSinceAccess = now - movie.lastAccessed;
-      
-      if (timeSinceAccess < oneHour) {
-        recentlyAccessed++;
-      } else if (timeSinceAccess > oneWeek) {
-        oldEntries++;
-      }
-      
-      totalSize += JSON.stringify(movie).length;
+    /**
+     * Search movies in database
+     */
+    async searchMovies(query, limit = 10) {
+        try {
+            const searchQuery = `
+                SELECT m.*, 
+                       array_agg(DISTINCT mg.genre_name) FILTER (WHERE mg.genre_name IS NOT NULL) as genres,
+                       array_agg(DISTINCT ml.language_code) FILTER (WHERE ml.language_code IS NOT NULL) as languages,
+                       ts_rank(to_tsvector('english', m.title || ' ' || COALESCE(m.overview, '')), plainto_tsquery('english', $1)) as rank
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.movie_key = mg.movie_key
+                LEFT JOIN movie_languages ml ON m.movie_key = ml.movie_key
+                WHERE to_tsvector('english', m.title || ' ' || COALESCE(m.overview, '')) @@ plainto_tsquery('english', $1)
+                   OR LOWER(m.title) LIKE LOWER($2)
+                   OR LOWER(m.original_title) LIKE LOWER($2)
+                GROUP BY m.movie_key
+                ORDER BY rank DESC, m.overall_rating DESC NULLS LAST
+                LIMIT $3
+            `;
+            
+            const likePattern = `%${query}%`;
+            const result = await databaseService.query(searchQuery, [query, likePattern, limit]);
+            
+            return result.rows.map(row => this.formatMovieFromDb(row));
+        } catch (error) {
+            logger.error(`Failed to search movies for "${query}":`, error.message);
+            return [];
+        }
     }
 
-    return {
-      totalMovies: this.movieData.size,
-      recentlyAccessed,
-      oldEntries,
-      estimatedSizeKB: Math.round(totalSize / 1024),
-      cacheFile: this.movieDataFile,
-      isDirty: this.isDirty
-    };
-  }
-
-  // Clean up old entries
-  async cleanup(maxAge = 30 * 24 * 60 * 60 * 1000) { // 30 days default
-    const now = new Date();
-    let cleaned = 0;
-
-    for (const [key, movie] of this.movieData.entries()) {
-      const age = now - movie.lastAccessed;
-      if (age > maxAge) {
-        this.movieData.delete(key);
-        cleaned++;
-      }
+    /**
+     * Get all movies from database
+     */
+    async getAllMovies(limit = 1000, offset = 0) {
+        try {
+            const query = `
+                SELECT m.*, 
+                       array_agg(DISTINCT mg.genre_name) FILTER (WHERE mg.genre_name IS NOT NULL) as genres,
+                       array_agg(DISTINCT ml.language_code) FILTER (WHERE ml.language_code IS NOT NULL) as languages
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.movie_key = mg.movie_key
+                LEFT JOIN movie_languages ml ON m.movie_key = ml.movie_key
+                GROUP BY m.movie_key
+                ORDER BY m.last_accessed DESC
+                LIMIT $1 OFFSET $2
+            `;
+            
+            const result = await databaseService.query(query, [limit, offset]);
+            return result.rows.map(row => this.formatMovieFromDb(row));
+        } catch (error) {
+            logger.error('Failed to get all movies:', error.message);
+            return [];
+        }
     }
 
-    if (cleaned > 0) {
-      this.isDirty = true;
-      await this.saveMovieData();
-      logger.info(`Cleaned up ${cleaned} old movie cache entries`);
+    /**
+     * Get cache statistics
+     */
+    async getStats() {
+        try {
+            const dbStats = await databaseService.query(`
+                SELECT 
+                    COUNT(*) as total_movies,
+                    COUNT(*) FILTER (WHERE cached_at IS NOT NULL) as cached_movies,
+                    AVG(overall_rating) as average_rating,
+                    MAX(last_accessed) as last_access,
+                    COUNT(DISTINCT primary_language) as languages_count,
+                    COUNT(DISTINCT movie_key) FILTER (WHERE is_favorite = true) as favorites_count
+                FROM movies
+            `);
+
+            const genreStats = await databaseService.query(`
+                SELECT COUNT(DISTINCT genre_name) as total_genres
+                FROM genres
+            `);
+
+            const memoryStats = {
+                size: this.memoryCache.size,
+                maxSize: this.maxMemoryCacheSize,
+                hitRate: this.calculateHitRate()
+            };
+
+            return {
+                database: {
+                    totalMovies: parseInt(dbStats.rows[0].total_movies) || 0,
+                    cachedMovies: parseInt(dbStats.rows[0].cached_movies) || 0,
+                    averageRating: parseFloat(dbStats.rows[0].average_rating) || 0,
+                    lastAccess: dbStats.rows[0].last_access,
+                    languagesCount: parseInt(dbStats.rows[0].languages_count) || 0,
+                    favoritesCount: parseInt(dbStats.rows[0].favorites_count) || 0,
+                    totalGenres: parseInt(genreStats.rows[0].total_genres) || 0
+                },
+                memory: memoryStats,
+                cacheHits: this.cacheHitStats,
+                type: 'database-first'
+            };
+        } catch (error) {
+            logger.error('Failed to get cache stats:', error.message);
+            return {
+                database: { totalMovies: 0, error: error.message },
+                memory: { size: this.memoryCache.size },
+                cacheHits: this.cacheHitStats,
+                type: 'database-first'
+            };
+        }
     }
 
-    return cleaned;
-  }
-
-  // Force save
-  async forceSave() {
-    this.isDirty = true;
-    await this.saveMovieData();
-  }
-
-  // Clear all cache
-  async clearCache() {
-    this.movieData.clear();
-    this.isDirty = true;
-    await this.saveMovieData();
-    logger.info('Movie cache cleared');
-  }
-
-  // Graceful shutdown
-  async shutdown() {
-    if (this.saveInterval) {
-      clearInterval(this.saveInterval);
+    /**
+     * Clear memory cache
+     */
+    clearMemoryCache() {
+        this.memoryCache.clear();
+        this.cacheHitStats = { memory: 0, database: 0, miss: 0 };
+        logger.info('🧹 Memory cache cleared');
     }
-    
-    if (this.isDirty) {
-      await this.saveMovieData();
+
+    /**
+     * Cleanup old entries (database-based)
+     */
+    async cleanup(maxAgeHours = 24 * 30) { // 30 days default
+        try {
+            const cutoffDate = new Date(Date.now() - (maxAgeHours * 60 * 60 * 1000));
+            
+            const result = await databaseService.query(`
+                DELETE FROM movies 
+                WHERE last_accessed < $1 
+                AND is_favorite = false
+                RETURNING movie_key
+            `, [cutoffDate]);
+
+            const cleaned = result.rows.length;
+            logger.info(`🧹 Cleaned up ${cleaned} old movie entries from database`);
+            
+            // Also clear memory cache
+            this.clearMemoryCache();
+            
+            return cleaned;
+        } catch (error) {
+            logger.error('Failed to cleanup old entries:', error.message);
+            return 0;
+        }
     }
-    
-    logger.info('Movie Data Service shutdown complete');
-  }
+
+    /**
+     * Force save operation (no-op for database-first approach)
+     */
+    async forceSave() {
+        // In database-first approach, data is already persisted
+        logger.info('💾 Force save requested - data already persisted in database');
+        return true;
+    }
+
+    /**
+     * Clear all cache (WARNING: This removes all movie data from database)
+     */
+    async clearCache() {
+        try {
+            await databaseService.query('DELETE FROM movies');
+            this.clearMemoryCache();
+            logger.warn('🗑️ All movie data cleared from database');
+            return true;
+        } catch (error) {
+            logger.error('Failed to clear cache:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Update movie access time
+     */
+    async updateLastAccessed(movieKey) {
+        try {
+            await databaseService.query(
+                'UPDATE movies SET last_accessed = NOW() WHERE movie_key = $1',
+                [movieKey]
+            );
+        } catch (error) {
+            logger.debug(`Failed to update last accessed for ${movieKey}:`, error.message);
+        }
+    }
+
+    // Private helper methods
+
+    generateMemoryKey(traktId, title, year) {
+        if (traktId) return `trakt_${traktId}`;
+        if (title && year) return `title_${title.toLowerCase()}_${year}`;
+        return `unknown_${Date.now()}`;
+    }
+
+    addToMemoryCache(key, movie) {
+        // Implement LRU-like behavior
+        if (this.memoryCache.size >= this.maxMemoryCacheSize) {
+            const firstKey = this.memoryCache.keys().next().value;
+            this.memoryCache.delete(firstKey);
+        }
+        this.memoryCache.set(key, movie);
+    }
+
+    calculateHitRate() {
+        const total = this.cacheHitStats.memory + this.cacheHitStats.database + this.cacheHitStats.miss;
+        if (total === 0) return 0;
+        return ((this.cacheHitStats.memory + this.cacheHitStats.database) / total * 100).toFixed(2);
+    }
+
+    transformMovieForDatabase(movieData) {
+        // If the movie data is already in the correct format, return as-is
+        if (movieData.movieKey || movieData.fullDetails) {
+            return movieData;
+        }
+
+        // Transform from API format to database format
+        const movieKey = `${movieData.title.replace(/[^a-zA-Z0-9]/g, '_')}_${movieData.year}`;
+        
+        return {
+            id: movieData.ids?.trakt || null,
+            title: movieData.title,
+            year: movieData.year,
+            traktId: movieData.ids?.trakt,
+            movieKey: movieKey,
+            depth: 0,
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+            isNew: false,
+            isFavorite: false,
+            expanding: false,
+            basicDetails: {
+                overview: movieData.overview,
+                rating: movieData.rating,
+                votes: movieData.votes,
+                genres: movieData.genres || [],
+                runtime: movieData.runtime,
+                certification: movieData.certification,
+                trailer: movieData.trailer
+            },
+            fullDetails: movieData
+        };
+    }
+
+    formatMovieFromDb(row) {
+        return databaseService.formatMovieFromDb(row);
+    }
+
+    /**
+     * Shutdown method for graceful cleanup
+     */
+    async shutdown() {
+        this.clearMemoryCache();
+        logger.info('🔄 Movie Data Service shutdown complete');
+    }
 }
 
 module.exports = new MovieDataService();

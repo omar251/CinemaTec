@@ -209,9 +209,31 @@ function setupFavoriteButtonListeners() {
     });
 }
 
-export function updateStats(nodes, links) {
-    const stats = document.getElementById('networkStats');
-    stats.textContent = `${nodes.length} movies, ${links.length} connections`;
+export async function updateStats(nodes, links) {
+    const stats = document.getElementById('networkStats') || document.querySelector('.stats');
+    if (!stats) return;
+    
+    try {
+        // Import the cache stats function dynamically
+        const { getCacheStats } = await import('./api.js');
+        const cacheStats = await getCacheStats();
+        
+        const totalCached = cacheStats.movieData?.database?.totalMovies || 0;
+        const avgRating = cacheStats.movieData?.database?.averageRating || 0;
+        const hitRate = cacheStats.memory?.hitRate || 0;
+        
+        stats.innerHTML = `
+            <span title="Movies in current network">${nodes.length} displayed</span> • 
+            <span title="Connections in current network">${links.length} connections</span> • 
+            <span title="Total movies in database cache">${totalCached} cached</span>
+            ${avgRating > 0 ? ` • <span title="Average rating">⭐ ${avgRating.toFixed(1)}</span>` : ''}
+            ${hitRate > 0 ? ` • <span title="Cache hit rate">🚀 ${hitRate}%</span>` : ''}
+        `;
+    } catch (error) {
+        console.error('Error updating stats with database info:', error);
+        // Fallback to simple stats
+        stats.textContent = `${nodes.length} movies, ${links.length} connections`;
+    }
 }
 
 export function showTooltip(event, d) {

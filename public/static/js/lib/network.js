@@ -130,7 +130,7 @@ export class DynamicMovieNetwork {
             id: this.nextNodeId++,
             title: movie.title,
             year: movie.year,
-            traktId: movie.ids.trakt,
+            traktId: movie.ids?.trakt || movie.traktId || movie.id,
             depth: depth,
             movieKey: movieKey,
             x: this.width / 2 + (Math.random() - 0.5) * 200,

@@ -1,4 +1,6 @@
 import { DynamicMovieNetwork } from './lib/network.js';
+import { getCachedMovies, searchCachedMovies, getCacheStats, getCachedMovie, clearCache } from './lib/api.js';
+import { databaseSearch } from './lib/database-search.js';
 import { TTSManager } from './lib/tts.js';
 import * as api from './lib/api.js';
 import * as ui from './lib/ui.js';
@@ -13,12 +15,179 @@ document.addEventListener('DOMContentLoaded', () => {
     const network = new DynamicMovieNetwork();
     const tts = new TTSManager();
     
-    // Enhanced search functionality
+    // Enhanced search functionality with database-first approach
     let searchTimeout;
     let recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+    
+    // Initialize database cache stats on load
+    async function initializeDatabaseStats() {
+        try {
+            const stats = await getCacheStats();
+            console.log('📊 Database cache initialized:', {
+                totalMovies: stats.movieData?.database?.totalMovies || 0,
+                averageRating: stats.movieData?.database?.averageRating || 0,
+                type: stats.type || 'unknown'
+            });
+        } catch (error) {
+            console.error('Failed to initialize database stats:', error);
+        }
+    }
+    
+    // Call initialization
+    initializeDatabaseStats();
     let isSearchDropdownOpen = false;
+    
+    // Add database cache management panel
+    function createCacheManagementPanel() {
+        const panel = document.createElement('div');
+        panel.id = 'cachePanel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 300px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 15px;
+            color: var(--text-color);
+            font-size: 12px;
+            z-index: 999;
+            display: none;
+        `;
+        
+        panel.innerHTML = `
+            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; color: var(--accent-color);">🗄️ Database Cache</h4>
+                <button id="closeCachePanel" style="background: none; border: none; color: var(--text-color); cursor: pointer; font-size: 16px;">&times;</button>
+            </div>
+            <div id="cacheStats" style="margin-bottom: 15px;"></div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="control-btn" id="refreshCacheStats" style="font-size: 10px; padding: 5px 10px;">Refresh</button>
+                <button class="control-btn" id="clearMemoryCache" style="font-size: 10px; padding: 5px 10px;">Clear Memory</button>
+                <button class="control-btn" id="searchCacheBtn" style="font-size: 10px; padding: 5px 10px;">Search Cache</button>
+            </div>
+            <div id="searchCacheInput" style="display: none; margin-top: 10px;">
+                <input type="text" placeholder="Search cached movies..." style="width: 100%; padding: 5px; border-radius: 5px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.1); color: var(--text-color);">
+                <div id="cacheSearchResults" style="max-height: 200px; overflow-y: auto; margin-top: 5px;"></div>
+            </div>
+        `;
+        
+        document.body.appendChild(panel);
+        
+        // Add event listeners
+        document.getElementById('closeCachePanel').addEventListener('click', () => {
+            panel.style.display = 'none';
+        });
+        
+        document.getElementById('refreshCacheStats').addEventListener('click', updateCachePanel);
+        
+        document.getElementById('clearMemoryCache').addEventListener('click', async () => {
+            try {
+                await clearCache('memory');
+                ui.showNotification('Memory cache cleared', 'success');
+                updateCachePanel();
+            } catch (error) {
+                ui.showNotification('Failed to clear cache', 'error');
+            }
+        });
+        
+        document.getElementById('searchCacheBtn').addEventListener('click', () => {
+            const searchDiv = document.getElementById('searchCacheInput');
+            searchDiv.style.display = searchDiv.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        // Cache search functionality
+        const searchInput = panel.querySelector('input');
+        searchInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                document.getElementById('cacheSearchResults').innerHTML = '';
+                return;
+            }
+            
+            const results = await databaseSearch.searchMovies(query, { limit: 5 });
+            const resultsDiv = document.getElementById('cacheSearchResults');
+            
+            if (results.length > 0) {
+                resultsDiv.innerHTML = results.map(movie => `
+                    <div style="padding: 5px; border-bottom: 1px solid var(--glass-border); cursor: pointer; font-size: 11px;" 
+                         data-trakt-id="${movie.traktId || movie.trakt_id || movie.id}" class="cache-search-result">
+                        <strong>${movie.title}</strong> (${movie.year})
+                        ${movie.overall_rating ? `<span style="color: var(--gemini-accent);">⭐ ${movie.overall_rating}</span>` : ''}
+                        <div style="font-size: 9px; color: var(--text-secondary);">ID: ${movie.traktId || movie.trakt_id || movie.id}</div>
+                    </div>
+                `).join('');
+                
+                // Add click handlers to add movies to network
+                resultsDiv.querySelectorAll('.cache-search-result').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const traktId = item.dataset.traktId;
+                        console.log(`🎬 Clicked movie with Trakt ID: ${traktId}`);
+                        
+                        if (!traktId || traktId === 'undefined' || traktId === 'null') {
+                            console.error('❌ Invalid Trakt ID:', traktId);
+                            ui.showNotification('Invalid movie ID', 'error');
+                            return;
+                        }
+                        
+                        const movie = await databaseSearch.getMovieById(traktId);
+                        if (movie) {
+                            await network.addMovieToNetwork(movie);
+                            ui.showNotification(`Added ${movie.title} to network`, 'success');
+                        } else {
+                            ui.showNotification('Movie not found in cache', 'error');
+                        }
+                    });
+                });
+            } else {
+                resultsDiv.innerHTML = '<div style="padding: 5px; color: var(--text-secondary);">No results found</div>';
+            }
+        });
+        
+        return panel;
+    }
+    
+    // Update cache panel with current stats
+    async function updateCachePanel() {
+        const statsDiv = document.getElementById('cacheStats');
+        if (!statsDiv) return;
+        
+        try {
+            const stats = await getCacheStats();
+            const dbStats = stats.movieData?.database || {};
+            const memStats = stats.memory || {};
+            
+            statsDiv.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 10px;">
+                    <div><strong>Total Movies:</strong> ${dbStats.totalMovies || 0}</div>
+                    <div><strong>Avg Rating:</strong> ${dbStats.averageRating ? dbStats.averageRating.toFixed(1) : 'N/A'}</div>
+                    <div><strong>Memory Cache:</strong> ${memStats.size || 0}/${memStats.maxSize || 100}</div>
+                    <div><strong>Hit Rate:</strong> ${memStats.hitRate || 0}%</div>
+                    <div><strong>Genres:</strong> ${dbStats.totalGenres || 0}</div>
+                    <div><strong>Languages:</strong> ${dbStats.languagesCount || 0}</div>
+                </div>
+            `;
+        } catch (error) {
+            statsDiv.innerHTML = '<div style="color: var(--accent-color);">Error loading stats</div>';
+        }
+    }
+    
+    // Create cache panel
+    const cachePanel = createCacheManagementPanel();
 
     function setupGlobalEventListeners() {
+        // Cache panel toggle
+        document.getElementById('cacheBtn')?.addEventListener('click', () => {
+            const panel = document.getElementById('cachePanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                updateCachePanel();
+            } else {
+                panel.style.display = 'none';
+            }
+        });
         // Enhanced search with debouncing and autocomplete
         const searchInput = document.getElementById('movieSearch');
         const searchBtn = document.getElementById('searchBtn');

@@ -1,4 +1,7 @@
-const apiBase = '/api';
+// Auto-detect API base URL based on current location
+const apiBase = window.location.port === '5000' ? '/api' : 
+                window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 
+                `http://127.0.0.1:5000/api` : '/api';
 
 export async function searchMovie(query) {
     try {
@@ -26,10 +29,40 @@ export async function getRelatedMovies(movieId) {
 
 export async function getFullMovieDetails(movieId) {
     try {
+        // First try to get from database cache
+        console.log(`🎬 Getting movie details for ID: ${movieId}`);
+        const cachedMovie = await getCachedMovie(movieId);
+        
+        if (cachedMovie && cachedMovie.fullDetails) {
+            console.log(`✅ Using cached movie details for: ${cachedMovie.title} (${cachedMovie.year})`);
+            return {
+                success: true,
+                movie: cachedMovie.fullDetails,
+                source: 'database-cache'
+            };
+        }
+        
+        // If we have basic cached data but no full details, use what we have
+        if (cachedMovie) {
+            console.log(`⚠️ Using basic cached details for: ${cachedMovie.title} (${cachedMovie.year})`);
+            return {
+                success: true,
+                movie: cachedMovie,
+                source: 'database-cache-basic'
+            };
+        }
+        
+        // Fallback to API if not in cache
+        console.log(`🌐 Fetching movie details from API for ID: ${movieId}`);
         const response = await fetch(`${apiBase}/movies/${movieId}/full`);
         if (!response.ok) throw new Error('Failed to get movie details');
         const data = await response.json();
-        return data;
+        
+        return {
+            success: data.success !== false,
+            movie: data.movie || data,
+            source: 'api'
+        };
     } catch (error) {
         console.error('Movie details error:', error);
         return null;
@@ -250,5 +283,93 @@ export async function checkAIHealth() {
     } catch (error) {
         console.error('AI health check error:', error);
         return { status: 'error', error: error.message };
+    }
+}
+
+// Database-first cache functions
+
+// Get all cached movies from database
+export async function getCachedMovies(limit = 1000, offset = 0) {
+    try {
+        const response = await fetch(`${apiBase}/cache/movies?limit=${limit}&offset=${offset}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.success ? data.data.movies : [];
+    } catch (error) {
+        console.error('Error fetching cached movies from database:', error);
+        return [];
+    }
+}
+
+// Search movies in database cache
+export async function searchCachedMovies(query, limit = 10) {
+    try {
+        const response = await fetch(`${apiBase}/cache/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.success ? data.data.results : [];
+    } catch (error) {
+        console.error('Error searching cached movies in database:', error);
+        return [];
+    }
+}
+
+// Get comprehensive cache statistics from database
+export async function getCacheStats() {
+    try {
+        const response = await fetch(`${apiBase}/cache/stats`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.success ? data.data : data; // Handle both new and old response formats
+    } catch (error) {
+        console.error('Error fetching cache stats from database:', error);
+        return { 
+            movieData: { database: { totalMovies: 0 } }, 
+            memoryCache: {},
+            type: 'database-first'
+        };
+    }
+}
+
+// Get movie from database cache by Trakt ID
+export async function getCachedMovie(traktId) {
+    try {
+        const response = await fetch(`${apiBase}/cache/movie/${traktId}`);
+        if (!response.ok) {
+            if (response.status === 404) return null;
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.success ? data.data : null;
+    } catch (error) {
+        console.error('Error fetching cached movie from database:', error);
+        return null;
+    }
+}
+
+// Clear database cache
+export async function clearCache(type = null) {
+    try {
+        const response = await fetch(`${apiBase}/cache/clear`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ type })
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error clearing cache:', error);
+        return false;
     }
 }

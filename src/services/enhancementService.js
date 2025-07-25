@@ -26,7 +26,7 @@ class EnhancementService {
     }
 
     // Check persistent movie data cache
-    const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+    const cachedMovie = await movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
     if (cachedMovie) {
       const enhancedFromCache = {
         ...movieItem,
@@ -64,7 +64,7 @@ class EnhancementService {
       cacheService.setEnhancedCache(cacheKey, enhanced);
       
       // Store in persistent movie data cache
-      movieDataService.storeMovie(enhanced.movie);
+      await movieDataService.storeMovie(enhanced.movie);
       
       logger.debug(`Movie enhanced successfully: ${movie.title}`);
 

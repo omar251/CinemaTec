@@ -96,7 +96,7 @@ router.get('/:traktId/related', setCacheHeaders, async (req, res) => {
     const uncachedMovies = [];
     
     for (const movie of moviesToProcess) {
-      const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+      const cachedMovie = await movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
       if (cachedMovie) {
         // Use cached enhanced version
         cachedMovies.push({ movie: cachedMovie });
@@ -147,7 +147,7 @@ router.get('/:traktId/related/fast', setCacheHeaders, async (req, res) => {
     const result = [];
     
     for (const movie of moviesToProcess) {
-      const cachedMovie = movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
+      const cachedMovie = await movieDataService.getMovie(movie.ids.trakt, movie.title, movie.year);
       if (cachedMovie) {
         // Use cached enhanced version with full details
         result.push(cachedMovie);

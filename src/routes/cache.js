@@ -7,26 +7,91 @@ const movieDataService = require('../services/movieDataService');
 const cacheService = require('../services/cacheService');
 const logger = require('../utils/logger');
 
-// Get cache statistics
+// Get cache statistics (updated for frontend compatibility)
 router.get('/stats', async (req, res) => {
   try {
-    const movieCacheStats = movieDataService.getStats();
+    const movieCacheStats = await movieDataService.getStats();
     const memoryCacheStats = cacheService.getStatus();
     
     const stats = {
-      movieCache: movieCacheStats,
-      memoryCache: memoryCacheStats,
-      timestamp: new Date().toISOString()
+      success: true,
+      data: {
+        movieData: movieCacheStats,
+        memoryCache: memoryCacheStats,
+        timestamp: new Date().toISOString()
+      }
     };
     
     res.json(stats);
   } catch (error) {
     logger.error(`Error getting cache stats: ${error.message}`);
-    res.status(500).json({ error: 'Failed to get cache statistics' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get cache statistics' 
+    });
   }
 });
 
-// Search movies in cache
+// Get all cached movies with pagination (new endpoint for frontend)
+router.get('/movies', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const movies = await movieDataService.getAllMovies(parseInt(limit), parseInt(offset));
+    const stats = await movieDataService.getStats();
+    
+    res.json({
+      success: true,
+      data: {
+        movies,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: stats.database?.totalMovies || 0
+        }
+      }
+    });
+  } catch (error) {
+    logger.error(`Error getting cached movies: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get cached movies' 
+    });
+  }
+});
+
+// Search movies in cache (new endpoint for frontend)
+router.get('/search', async (req, res) => {
+  try {
+    const { q: query, limit = 10 } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Query parameter "q" is required' 
+      });
+    }
+    
+    const results = await movieDataService.searchMovies(query, parseInt(limit));
+    
+    res.json({
+      success: true,
+      data: {
+        query,
+        results,
+        count: results.length
+      }
+    });
+  } catch (error) {
+    logger.error(`Error searching movie cache: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to search movie cache' 
+    });
+  }
+});
+
+// Search movies in cache (legacy endpoint)
 router.get('/movies/search', async (req, res) => {
   try {
     const { q: query, limit = 10 } = req.query;
@@ -35,7 +100,7 @@ router.get('/movies/search', async (req, res) => {
       return res.status(400).json({ error: 'Query parameter "q" is required' });
     }
     
-    const results = movieDataService.searchMovies(query, parseInt(limit));
+    const results = await movieDataService.searchMovies(query, parseInt(limit));
     
     res.json({
       query,
@@ -49,10 +114,36 @@ router.get('/movies/search', async (req, res) => {
 });
 
 // Get specific movie from cache
+router.get('/movie/:traktId', async (req, res) => {
+  try {
+    const { traktId } = req.params;
+    const movie = await movieDataService.getMovie(parseInt(traktId));
+    
+    if (!movie) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Movie not found in cache' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: movie
+    });
+  } catch (error) {
+    logger.error(`Error getting movie from cache: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get movie from cache' 
+    });
+  }
+});
+
+// Get specific movie from cache (legacy endpoint)
 router.get('/movies/:traktId', async (req, res) => {
   try {
     const { traktId } = req.params;
-    const movie = movieDataService.getMovie(parseInt(traktId));
+    const movie = await movieDataService.getMovie(parseInt(traktId));
     
     if (!movie) {
       return res.status(404).json({ error: 'Movie not found in cache' });
@@ -74,7 +165,7 @@ router.post('/movies/batch', async (req, res) => {
       return res.status(400).json({ error: 'traktIds must be an array' });
     }
     
-    const movies = movieDataService.getMovies(traktIds);
+    const movies = await movieDataService.getMovies(traktIds);
     
     res.json({
       requested: traktIds.length,
@@ -91,7 +182,7 @@ router.post('/movies/batch', async (req, res) => {
 router.post('/movies/save', async (req, res) => {
   try {
     await movieDataService.forceSave();
-    const stats = movieDataService.getStats();
+    const stats = await movieDataService.getStats();
     
     res.json({
       message: 'Movie cache saved successfully',
@@ -108,7 +199,7 @@ router.post('/movies/cleanup', async (req, res) => {
   try {
     const { maxAge } = req.body;
     const cleaned = await movieDataService.cleanup(maxAge);
-    const stats = movieDataService.getStats();
+    const stats = await movieDataService.getStats();
     
     res.json({
       message: `Cleaned up ${cleaned} old entries`,
@@ -121,7 +212,37 @@ router.post('/movies/cleanup', async (req, res) => {
   }
 });
 
-// Clear all memory caches
+// Clear cache (new unified endpoint for frontend)
+router.post('/clear', async (req, res) => {
+  try {
+    const { type } = req.body;
+    
+    if (type === 'movie-data' || !type) {
+      // Clear movie data cache (database)
+      await movieDataService.clearCache();
+      logger.info('Movie data cache cleared');
+    }
+    
+    if (type === 'memory' || !type) {
+      // Clear memory cache (API responses)
+      cacheService.clearAll();
+      logger.info('Memory cache cleared');
+    }
+    
+    res.json({
+      success: true,
+      message: `Cache cleared successfully${type ? ` (${type})` : ''}`
+    });
+  } catch (error) {
+    logger.error(`Failed to clear cache: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Clear all memory caches (legacy endpoint)
 router.post('/memory/clear', async (req, res) => {
   try {
     cacheService.clearAll();
