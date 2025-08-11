@@ -211,7 +211,10 @@ function setupFavoriteButtonListeners() {
 
 export function updateStats(nodes, links) {
     const stats = document.getElementById('networkStats');
-    stats.textContent = `${nodes.length} movies, ${links.length} connections`;
+    stats.innerHTML = `
+        <span title="Movies">🎬 ${nodes.length}</span>
+        <span title="Connections">🔗 ${links.length}</span>
+    `;
 }
 
 export function showTooltip(event, d) {

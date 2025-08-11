@@ -249,6 +249,7 @@ export class DynamicMovieNetwork {
             .append('text')
             .attr('class', 'node-label')
             .text(d => d.title)
+            .attr('aria-label', d => `${d.title} (${d.year})`)
             .style('display', this.showLabels ? 'block' : 'none');
 
         labelEnter.merge(labelSelection)
@@ -332,6 +333,7 @@ export class DynamicMovieNetwork {
             if (movie) {
                 const fullDetails = await api.getFullMovieDetails(movie.ids.trakt);
                 const node = this.addMovieToNetwork(movie, 0, true, fullDetails);
+                try { if (window.updateEmptyOverlay) window.updateEmptyOverlay(); } catch(_){}
                 ui.showNotification(`Added "${movie.title}" to network!`, 'success');
                 searchInput.value = '';
                 

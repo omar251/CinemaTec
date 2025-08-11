@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('saveBtn').addEventListener('click', showSaveDialog);
         document.getElementById('loadBtn').addEventListener('click', showLoadDialog);
-        document.getElementById('clearBtn').addEventListener('click', () => network.clearNetwork());
+        document.getElementById('clearBtn').addEventListener('click', () => { network.clearNetwork(); updateEmptyOverlay(); });
         document.getElementById('centerBtn').addEventListener('click', () => network.centerNetwork());
         document.getElementById('labelsBtn').addEventListener('click', () => network.toggleLabels());
 
@@ -558,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const networkData = await api.loadNetworkFromServer(networkId);
             network.loadNetworkData(networkData);
+            if (window.updateEmptyOverlay) window.updateEmptyOverlay();
             
             ui.showNotification(`Network "${networkData.name}" loaded successfully!`, 'success');
             closeLoadDialog();
@@ -739,6 +740,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showSearchSuggestions(query) {
         const dropdown = document.getElementById('searchDropdown');
         dropdown.innerHTML = '<div style="padding: 15px; text-align: center;">Searching...</div>';
+        // show recent below loader
+        if (recentSearches.length) {
+            dropdown.innerHTML += `
+                <div style="padding: 8px 15px; border-top: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 11px;">Recent</div>
+                ${recentSearches.slice(0,3).map(s=>`<div class="recent-search-item">🕒 ${s}</div>`).join('')}
+            `;
+        }
         dropdown.style.display = 'block';
         isSearchDropdownOpen = true;
 
@@ -757,14 +765,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySearchResults(results, query) {
         const dropdown = document.getElementById('searchDropdown');
         
-        const resultsHtml = results.map(movie => `
-            <div class="search-result-item" data-movie-id="${movie.ids.trakt}">
-                <div class="movie-title">${highlightQuery(movie.title, query)}</div>
-                <div class="movie-meta">
-                    ${movie.year} ${movie.genres ? '• ' + movie.genres.slice(0, 2).join(', ') : ''}
+        const resultsHtml = results.map(movie => {
+            const poster = (movie.images?.poster?.thumb) ? movie.images.poster.thumb : (movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : '');
+            return `
+            <div class="search-result-item" data-movie-id="${movie.ids.trakt}" style="display:flex; align-items:center; gap:10px;">
+                ${poster ? `<img src="${poster}" alt="${movie.title}" width="36" height="54" style="object-fit:cover; border-radius:6px;" onerror="this.style.display='none'"/>` : ''}
+                <div style="flex:1; min-width:0;">
+                    <div class="movie-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${highlightQuery(movie.title, query)}</div>
+                    <div class="movie-meta">${movie.year || ''} ${movie.genres ? '• ' + movie.genres.slice(0, 2).join(', ') : ''}</div>
                 </div>
-            </div>
-        `).join('');
+                <button class="control-btn" data-action="add" style="padding:6px 10px;">Add</button>
+            </div>`;
+        }).join('');
 
         dropdown.innerHTML = `
             <div style="padding: 10px 15px; border-bottom: 1px solid var(--glass-border); font-weight: bold; color: var(--gemini-accent);">
@@ -775,12 +787,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add click handlers
         dropdown.querySelectorAll('.search-result-item').forEach(item => {
-            item.addEventListener('click', () => {
+            // Click on the whole item selects
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('button[data-action="add"]')) return; // handled below
                 const movieId = item.dataset.movieId;
-                const title = item.querySelector('div').textContent;
+                const title = item.querySelector('.movie-title')?.textContent?.replace(/\s+Add$/, '') || '';
                 selectMovieFromSearch(title);
                 hideSearchDropdown();
             });
+            // Explicit add button
+            const addBtn = item.querySelector('button[data-action="add"]');
+            if (addBtn) {
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const title = item.querySelector('.movie-title')?.textContent?.replace(/\s+Add$/, '') || '';
+                    selectMovieFromSearch(title);
+                    hideSearchDropdown();
+                });
+            }
         });
     }
 
@@ -1178,7 +1202,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupGlobalEventListeners();
     checkAIAvailability(); // Check if AI features are available
+
+    // Build Quick Help flyout
+    (function setupQuickHelp(){
+        const helpBtn = document.getElementById('helpBtn');
+        if (!helpBtn) return;
+        let panel = null;
+        const ensurePanel = () => {
+            if (panel) return panel;
+            panel = document.createElement('div');
+            panel.id = 'quickHelpPanel';
+            panel.style.cssText = `
+                position: fixed; top: 120px; right: 20px; z-index: 1400;
+                width: 320px; max-height: 70vh; overflow: auto;
+                background: var(--glass-bg); color: var(--text-color);
+                border: 1px solid var(--glass-border); border-radius: 14px;
+                padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+                backdrop-filter: blur(10px); display: none;
+            `;
+            panel.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong>❓ Quick Help</strong>
+                    <button id="qhClose" class="control-btn" style="padding:4px 8px;">✖</button>
+                </div>
+                <div style="font-size: 12px; line-height: 1.5; display: grid; gap: 10px;">
+                    <div>
+                        <div style="color: var(--gemini-accent); font-weight: 600;">Shortcuts</div>
+                        <ul style="margin: 6px 0 0 16px;">
+                            <li>Space: Toggle Mouse Navigation</li>
+                            <li>C: Center network</li>
+                            <li>L: Toggle labels</li>
+                            <li>Ctrl/Cmd + Click or Double-click: Expand node</li>
+                            <li>Scroll: Zoom</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="color: var(--gemini-accent); font-weight: 600;">Tips</div>
+                        <ul style="margin: 6px 0 0 16px;">
+                            <li>Use the color sidebar to highlight by depth, genre, year, etc.</li>
+                            <li>Hover movies in the list to highlight them in the network.</li>
+                            <li>Save your network and export it for later.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="color: var(--gemini-accent); font-weight: 600;">AI & TTS</div>
+                        <ul style="margin: 6px 0 0 16px;">
+                            <li>AI Insights analyzes your current network (Gemini API required).</li>
+                            <li>Open a movie to listen to its overview with TTS.</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(panel);
+            document.getElementById('qhClose').addEventListener('click', ()=> panel.style.display='none');
+            setTimeout(()=>{
+                document.addEventListener('click', (ev)=>{
+                    if (panel.style.display !== 'none' && !panel.contains(ev.target) && ev.target !== helpBtn) {
+                        panel.style.display = 'none';
+                    }
+                });
+            }, 0);
+            // Keyboard helpers
+            document.addEventListener('keydown', (e)=>{
+                if (e.key.toLowerCase() === 'c') {
+                    network.centerNetwork();
+                }
+                if (e.key.toLowerCase() === 'l') {
+                    network.toggleLabels();
+                }
+            });
+            return panel;
+        };
+        helpBtn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            const p = ensurePanel();
+            p.style.display = (p.style.display === 'none' || !p.style.display) ? 'block' : 'none';
+        });
+    })();
     
+    // Empty overlay helper
+    window.updateEmptyOverlay = function updateEmptyOverlay(){
+        const overlay = document.getElementById('emptyOverlay');
+        if (!overlay) return;
+        const isEmpty = (network.nodes?.length || 0) === 0;
+        overlay.style.display = isEmpty ? 'flex' : 'none';
+    };
+    window.updateEmptyOverlay();
+
     // Initialize the color sidebar with default mode
     if (network) {
         network.currentColorMode = 'depth'; // Ensure the mode is set
