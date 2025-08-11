@@ -7,15 +7,7 @@ const traktService = require('../services/traktService');
 const enhancementService = require('../services/enhancementService');
 const movieDataService = require('../services/movieDataService');
 const logger = require('../utils/logger');
-
-// Cache middleware for HTTP responses
-function setCacheHeaders(req, res, next) {
-  res.set({
-    'Cache-Control': 'public, max-age=300', // 5 minutes
-    'ETag': `"${Date.now()}"`,
-  });
-  next();
-}
+const { setCacheHeaders } = require('../middleware');
 
 
 // Enhance a specific movie

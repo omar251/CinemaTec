@@ -48,8 +48,8 @@ function setupMiddleware(app) {
 // Cache headers middleware
 function setCacheHeaders(req, res, next) {
   res.set({
-    'Cache-Control': 'public, max-age=300', // 5 minutes
-    'ETag': `"${Date.now()}"`,
+    'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+    
   });
   next();
 }

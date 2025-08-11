@@ -61,7 +61,9 @@ class AIService {
   }
 
   async generateMovieSynopsis(movieTitle, movieOverview) {
-    const cacheKey = `ai:synopsis:${movieTitle}`;
+    const crypto = require('crypto');
+    const ovHash = crypto.createHash('md5').update(movieOverview || '').digest('hex');
+    const cacheKey = `ai:synopsis:${movieTitle}:${ovHash}`;
     
     const prompt = `Create a compelling, concise synopsis for the movie "${movieTitle}".
     
@@ -80,7 +82,12 @@ Synopsis:`;
   }
 
   async generateMovieInsights(selectedMovie, relatedMovies) {
-    const cacheKey = `ai:insights:${selectedMovie.title}:${relatedMovies.length}`;
+    const relatedKey = (relatedMovies || [])
+      .map(m => m.title || '')
+      .filter(Boolean)
+      .sort()
+      .join('|');
+    const cacheKey = `ai:insights:${selectedMovie.title}:${relatedKey}`;
     
     const relatedTitles = relatedMovies.map(m => m.title).join(', ');
     
@@ -101,7 +108,13 @@ Insights:`;
   }
 
   async generateNetworkAnalysis(networkData) {
-    const cacheKey = `ai:network:${networkData.nodes.length}:${Date.now()}`;
+    const titles = (networkData.nodes || [])
+      .map(n => n.title || '')
+      .filter(Boolean)
+      .sort()
+      .join('|');
+    const linkCount = Array.isArray(networkData.links) ? networkData.links.length : 0;
+    const cacheKey = `ai:network:${titles}:${linkCount}`;
     
     const movieTitles = networkData.nodes.map(node => node.title).join(', ');
     

@@ -70,7 +70,7 @@ class TTSService {
       // Use Edge TTS
       try {
         logger.info(`🎵 Using Edge TTS for synthesis with voice: ${voice}`);
-        logger.info(`📝 Text to synthesize: "${text.substring(0, 100)}..."`);
+        logger.debug(`📝 Text to synthesize (truncated): \"${text.substring(0, 100)}...\"`);
         
         // Use the Edge TTS service to generate audio
         const audioBuffer = await edgeTTSService.synthesizeText(text, voice);
@@ -122,7 +122,7 @@ class TTSService {
       voicesAvailable: this.availableVoices.length,
       defaultVoice: this.defaultVoice,
       englishVoices: this.getEnglishVoices().length,
-      edgeTTSAvailable: edgeTTSInstance !== null
+      edgeTTSAvailable: !!edgeTTSService && edgeTTSService.isInitialized
     };
   }
 }

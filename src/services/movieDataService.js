@@ -212,7 +212,15 @@ class MovieDataService {
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       
-      return (b.rating || 0) - (a.rating || 0);
+      const getRating = (m) => {
+        if (typeof m.rating === 'number') return m.rating;
+        if (m.fullDetails?.rating) return m.fullDetails.rating;
+        if (m.ratings?.rating) return m.ratings.rating;
+        if (m.basicDetails?.rating) return m.basicDetails.rating;
+        return 0;
+      };
+      
+      return getRating(b) - getRating(a);
     });
   }
 

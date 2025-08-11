@@ -23,6 +23,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://cinematec_user:cinematec_password@postgres:5432/cinematec_explorer
+    env_file:
+      - .env
     depends_on:
       - postgres
     restart: unless-stopped
