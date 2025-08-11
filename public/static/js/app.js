@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const network = new DynamicMovieNetwork();
     // Mouse-edge navigator for D3 zoom pan
-    const mouseNavigator = new EdgeMouseNavigator(network.svg, network.zoom, {
+    // Load mouse nav settings from localStorage or defaults
+    const savedMouseNav = JSON.parse(localStorage.getItem('mouseNavSettings') || '{}');
+    const mouseNavDefaults = {
         sensitivity: 0.06,
         smoothing: 0.2,
         maxDistance: 240,
@@ -21,7 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
         invertPanning: true,
         exponentialScaling: false,
         baseSpeed: 18
-    });
+    };
+    const mouseNavConfig = { ...mouseNavDefaults, ...savedMouseNav };
+
+    const mouseNavigator = new EdgeMouseNavigator(network.svg, network.zoom, mouseNavConfig);
     const tts = new TTSManager();
     
     // Enhanced search functionality
@@ -83,6 +88,143 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mouse navigation toggle
         const mouseNavBtn = document.getElementById('mouseNavBtn');
         if (mouseNavBtn) {
+            const settingsBtn = document.getElementById('mouseNavSettingsBtn');
+            if (settingsBtn) {
+                // Build settings popover lazily on first click
+                let popoverEl = null;
+                const ensureSettingsPopover = () => {
+                    if (popoverEl) return popoverEl;
+                    popoverEl = document.createElement('div');
+                    popoverEl.id = 'mouseNavPopover';
+                    popoverEl.style.cssText = `
+                        position: fixed; top: 70px; right: 20px; z-index: 1500;
+                        background: var(--glass-bg); color: var(--text-color);
+                        border: 1px solid var(--glass-border); border-radius: 12px;
+                        padding: 12px; width: 280px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                        backdrop-filter: blur(10px);
+                    `;
+                    popoverEl.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <strong>🖱️ Mouse Navigation</strong>
+                            <button id="mouseNavClose" class="control-btn" style="padding:4px 8px;">✖</button>
+                        </div>
+                        <div style="display:grid; gap:10px; font-size:12px;">
+                            <label> 
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>Sensitivity</span>
+                                    <span id="mn_sensitivity_val"></span>
+                                </div>
+                                <input id="mn_sensitivity" type="range" min="0.01" max="0.3" step="0.01" />
+                            </label>
+                            <label>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>Smoothing</span>
+                                    <span id="mn_smoothing_val"></span>
+                                </div>
+                                <input id="mn_smoothing" type="range" min="0.05" max="0.9" step="0.05" />
+                            </label>
+                            <label>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>Max Distance</span>
+                                    <span id="mn_maxDistance_val"></span>
+                                </div>
+                                <input id="mn_maxDistance" type="range" min="100" max="600" step="10" />
+                            </label>
+                            <label>
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span>Dead Zone</span>
+                                    <span id="mn_deadZone_val"></span>
+                                </div>
+                                <input id="mn_deadZone" type="range" min="0" max="150" step="5" />
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input id="mn_invert" type="checkbox" /> Invert Panning
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input id="mn_exponential" type="checkbox" /> Exponential Scaling
+                            </label>
+                            <div style="display:flex; justify-content:space-between; gap:8px;">
+                                <button id="mn_resetBtn" class="control-btn" style="flex:1;">Reset</button>
+                                <button id="mn_closeBtn" class="control-btn" style="flex:1;">Close</button>
+                            </div>
+                            <div style="font-size:11px; color: var(--text-secondary);">Tip: Press Space to toggle Mouse Nav</div>
+                        </div>
+                    `;
+                    document.body.appendChild(popoverEl);
+
+                    // Wire inputs
+                    const bindSlider = (id, key, formatter = (v)=>v) => {
+                        const el = document.getElementById(id);
+                        const label = document.getElementById(id + '_val');
+                        el.value = mouseNavConfig[key];
+                        label.textContent = formatter(mouseNavConfig[key]);
+                        el.addEventListener('input', () => {
+                            const val = parseFloat(el.value);
+                            mouseNavConfig[key] = val;
+                            mouseNavigator.setParams({ [key]: val });
+                            label.textContent = formatter(val);
+                            localStorage.setItem('mouseNavSettings', JSON.stringify(mouseNavConfig));
+                        });
+                    };
+
+                    bindSlider('mn_sensitivity', 'sensitivity', v=>Number(v).toFixed(2));
+                    bindSlider('mn_smoothing', 'smoothing', v=>Number(v).toFixed(2));
+                    bindSlider('mn_maxDistance', 'maxDistance', v=>`${Math.round(v)}px`);
+                    bindSlider('mn_deadZone', 'deadZone', v=>`${Math.round(v)}px`);
+
+                    // Checkboxes
+                    const invertEl = document.getElementById('mn_invert');
+                    const expoEl = document.getElementById('mn_exponential');
+                    invertEl.checked = !!mouseNavConfig.invertPanning;
+                    expoEl.checked = !!mouseNavConfig.exponentialScaling;
+                    invertEl.addEventListener('change',()=>{
+                        mouseNavConfig.invertPanning = invertEl.checked;
+                        mouseNavigator.setParams({ invertPanning: invertEl.checked });
+                        localStorage.setItem('mouseNavSettings', JSON.stringify(mouseNavConfig));
+                    });
+                    expoEl.addEventListener('change',()=>{
+                        mouseNavConfig.exponentialScaling = expoEl.checked;
+                        mouseNavigator.setParams({ exponentialScaling: expoEl.checked });
+                        localStorage.setItem('mouseNavSettings', JSON.stringify(mouseNavConfig));
+                    });
+
+                    // Buttons
+                    const close = ()=> { popoverEl.style.display='none'; };
+                    document.getElementById('mouseNavClose').addEventListener('click', close);
+                    document.getElementById('mn_closeBtn').addEventListener('click', close);
+                    document.getElementById('mn_resetBtn').addEventListener('click', ()=>{
+                        Object.assign(mouseNavConfig, mouseNavDefaults);
+                        mouseNavigator.setParams(mouseNavDefaults);
+                        localStorage.setItem('mouseNavSettings', JSON.stringify(mouseNavConfig));
+                        // Reset UI values
+                        ['sensitivity','smoothing','maxDistance','deadZone'].forEach(k=>{
+                            const sid = 'mn_' + k;
+                            const el = document.getElementById(sid);
+                            const label = document.getElementById(sid+'_val');
+                            el.value = mouseNavDefaults[k];
+                            label.textContent = ['sensitivity','smoothing'].includes(k) ? Number(mouseNavDefaults[k]).toFixed(2) : `${mouseNavDefaults[k]}px`;
+                        });
+                        invertEl.checked = mouseNavDefaults.invertPanning;
+                        expoEl.checked = mouseNavDefaults.exponentialScaling;
+                    });
+
+                    // Click-away to close
+                    setTimeout(()=>{
+                        document.addEventListener('click', (ev)=>{
+                            if (popoverEl.style.display !== 'none' && !popoverEl.contains(ev.target) && ev.target !== settingsBtn) {
+                                popoverEl.style.display = 'none';
+                            }
+                        });
+                    }, 0);
+                    return popoverEl;
+                };
+
+                settingsBtn.addEventListener('click', (e)=>{
+                    e.stopPropagation();
+                    const el = ensureSettingsPopover();
+                    el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+                });
+            }
             let mouseNavEnabled = false;
             const updateMouseNavBtn = () => {
                 mouseNavBtn.classList.toggle('active', mouseNavEnabled);
