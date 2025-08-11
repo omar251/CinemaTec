@@ -2,6 +2,7 @@ import { DynamicMovieNetwork } from './lib/network.js';
 import { TTSManager } from './lib/tts.js';
 import * as api from './lib/api.js';
 import * as ui from './lib/ui.js';
+import { EdgeMouseNavigator } from './lib/mouseNav.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof d3 === 'undefined') {
@@ -11,6 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const network = new DynamicMovieNetwork();
+    // Mouse-edge navigator for D3 zoom pan
+    const mouseNavigator = new EdgeMouseNavigator(network.svg, network.zoom, {
+        sensitivity: 0.06,
+        smoothing: 0.2,
+        maxDistance: 240,
+        deadZone: 35,
+        invertPanning: true,
+        exponentialScaling: false,
+        baseSpeed: 18
+    });
     const tts = new TTSManager();
     
     // Enhanced search functionality
@@ -68,6 +79,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clearBtn').addEventListener('click', () => network.clearNetwork());
         document.getElementById('centerBtn').addEventListener('click', () => network.centerNetwork());
         document.getElementById('labelsBtn').addEventListener('click', () => network.toggleLabels());
+
+        // Mouse navigation toggle
+        const mouseNavBtn = document.getElementById('mouseNavBtn');
+        if (mouseNavBtn) {
+            let mouseNavEnabled = false;
+            const updateMouseNavBtn = () => {
+                mouseNavBtn.classList.toggle('active', mouseNavEnabled);
+                mouseNavBtn.textContent = mouseNavEnabled ? '🖱️ Mouse Nav: On' : '🖱️ Mouse Nav: Off';
+                mouseNavBtn.title = (mouseNavEnabled ? 'Disable mouse-edge navigation' : 'Enable mouse-edge navigation') + ' (Space)';
+            };
+            updateMouseNavBtn();
+            const toggleMouseNav = () => {
+                mouseNavEnabled = mouseNavigator.toggle();
+                updateMouseNavBtn();
+                ui.showNotification(mouseNavEnabled ? 'Mouse navigation enabled' : 'Mouse navigation disabled', mouseNavEnabled ? 'success' : 'info');
+            };
+            mouseNavBtn.addEventListener('click', toggleMouseNav);
+            // Spacebar shortcut (when not typing in input/textarea)
+            document.addEventListener('keydown', (e) => {
+                const tag = (document.activeElement && document.activeElement.tagName) || '';
+                if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.isComposing) {
+                    e.preventDefault();
+                    toggleMouseNav();
+                }
+            });
+        }
 
         // Listen for custom event to remove a node
         document.addEventListener('removeNode', (e) => {
