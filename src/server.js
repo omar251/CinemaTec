@@ -98,7 +98,7 @@ class Server {
     logger.info('📋 Configuration Status:');
     logger.info(`   • Trakt API: ${config.apis.trakt.key ? '✅ Configured' : '❌ Missing'}`);
     logger.info(`   • TMDB API: ${config.apis.tmdb.key ? '✅ Configured' : '⚠️  Optional'}`);
-    logger.info(`   • Gemini AI: ${config.apis.gemini.key ? '✅ Configured' : '⚠️  Optional'}`);
+    logger.info(`   • AI Provider: ${config.apis.ai.provider || (config.apis.gemini.key ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : 'none')))}`);
     logger.info(`   • Storage: ${config.storage.type}-based (${config.storage.dataDir})`);
     logger.info(`   • Environment: ${config.server.nodeEnv}`);
   }

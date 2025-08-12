@@ -18,7 +18,8 @@ router.get('/', async (req, res) => {
       timestamp: new Date().toISOString(),
       trakt_api_configured: !!config.apis.trakt.key,
       tmdb_api_configured: !!config.apis.tmdb.key,
-      gemini_api_configured: !!config.apis.gemini.key,
+      ai_provider: config.apis.ai.provider || (config.apis.gemini.key ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : null))),
+      ai_configured: !!(config.apis.ai.provider || config.apis.gemini.key || process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY),
       optimization: 'enabled',
       runtime: 'Node.js',
       storage: config.storage.type + '-based',
@@ -72,9 +73,10 @@ router.get('/detailed', async (req, res) => {
           timeout: config.apis.tmdb.timeout
         },
         ai: {
-          configured: !!config.apis.gemini.key,
+          configured: !!(config.apis.ai.provider || config.apis.gemini.key || process.env.OPENAI_API_KEY),
+          provider: config.apis.ai.provider || (config.apis.gemini.key ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : 'none'))),
           status: aiHealth.status,
-          model: config.apis.gemini.model,
+          model: aiHealth.model,
           ...(aiHealth.error && { error: aiHealth.error })
         }
       },

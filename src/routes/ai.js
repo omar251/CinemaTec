@@ -1,5 +1,5 @@
 /**
- * AI integration routes
+ * AI integration routes (provider-agnostic)
  */
 const express = require('express');
 const router = express.Router();
@@ -37,7 +37,7 @@ router.post('/synopsis', async (req, res) => {
     if (error.message.includes('AI service not available')) {
       return res.status(503).json({ 
         error: 'AI service not available',
-        details: 'Gemini API key not configured'
+        details: 'AI provider not configured'
       });
     }
 
@@ -82,7 +82,7 @@ router.post('/insights', async (req, res) => {
     if (error.message.includes('AI service not available')) {
       return res.status(503).json({ 
         error: 'AI service not available',
-        details: 'Gemini API key not configured'
+        details: 'AI provider not configured'
       });
     }
 
@@ -126,14 +126,14 @@ router.post('/network-analysis', async (req, res) => {
     if (error.message.includes('AI service not available')) {
       return res.status(503).json({ 
         error: 'AI service not available',
-        details: 'Gemini API key not configured. Add GEMINI_API_KEY to your .env file.'
+        details: 'AI provider not configured. Set AI_PROVIDER and corresponding API key in your .env file.'
       });
     }
 
     res.status(500).json({ 
       error: 'Failed to generate network analysis',
       details: error.message,
-      hint: 'Check if GEMINI_API_KEY is configured in .env file'
+      hint: 'Check AI provider configuration in .env (AI_PROVIDER, AI_API_KEY or provider-specific key)'
     });
   }
 });
@@ -146,14 +146,16 @@ router.get('/health', async (req, res) => {
     if (healthStatus.status === 'healthy') {
       res.json({
         status: 'healthy',
-        service: 'AI (Gemini)',
+        service: `AI (${healthStatus.provider || 'unknown'})`,
+        provider: healthStatus.provider || 'unknown',
         model: healthStatus.model,
         test_response: healthStatus.response
       });
     } else {
       res.status(503).json({
         status: healthStatus.status,
-        service: 'AI (Gemini)',
+        service: `AI (${healthStatus.provider || 'unconfigured'})`,
+        provider: healthStatus.provider || 'unconfigured',
         reason: healthStatus.reason || healthStatus.error
       });
     }
@@ -161,7 +163,7 @@ router.get('/health', async (req, res) => {
     logger.error(`AI health check failed: ${error.message}`);
     res.status(500).json({
       status: 'error',
-      service: 'AI (Gemini)',
+      service: 'AI',
       error: error.message
     });
   }

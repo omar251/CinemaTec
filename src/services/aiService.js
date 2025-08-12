@@ -1,29 +1,41 @@
 /**
- * AI service for Gemini integration
+ * Provider-agnostic AI service
  */
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../config');
 const logger = require('../utils/logger');
 const cacheService = require('./cacheService');
+const { createAIProvider } = require('./ai/providerFactory');
 
 class AIService {
   constructor() {
-    if (!config.apis.gemini.key) {
-      logger.warn('Gemini API key not configured - AI features will not be available');
-      this.enabled = false;
-      return;
-    }
-
-    try {
-      this.genAI = new GoogleGenerativeAI(config.apis.gemini.key);
-      this.model = this.genAI.getGenerativeModel({ model: config.apis.gemini.model });
-      this.enabled = true;
-      logger.info('🤖 Gemini AI service initialized successfully');
-    } catch (error) {
-      logger.error(`Failed to initialize Gemini AI: ${error.message}`);
-      this.enabled = false;
+    this.provider = createAIProvider(config, logger);
+    this.enabled = !!this.provider;
+    this.currentProviderName = this.provider?.getProviderInfo()?.name || null;
+    if (!this.enabled) {
+      logger.warn('AI provider not configured - AI features will not be available');
+    } else {
+      const info = this.provider.getProviderInfo();
+      logger.info(`🤖 AI service initialized (${info.name}:${info.model})`);
     }
   }
+
+ // Switch provider at runtime (best-effort)
+ setProvider(preferred) {
+   try {
+     const newProvider = createAIProvider(config, logger, preferred);
+     if (newProvider && newProvider.isEnabled()) {
+       this.provider = newProvider;
+       this.enabled = true;
+       this.currentProviderName = newProvider.getProviderInfo()?.name;
+       logger.info(`AI provider switched to ${this.currentProviderName}`);
+       return { success: true, provider: this.currentProviderName };
+     }
+     return { success: false, error: 'Provider not available or not enabled' };
+   } catch (err) {
+     logger.error(`Failed to switch AI provider: ${err.message}`);
+     return { success: false, error: err.message };
+   }
+ }
 
   async generateContent(prompt, cacheKey = null) {
     if (!this.enabled) {
@@ -40,9 +52,7 @@ class AIService {
 
     try {
       logger.debug('Generating AI content', { promptLength: prompt.length });
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = await this.provider.generateText(prompt);
 
       // Cache the response if key provided
       if (cacheKey) {
@@ -59,6 +69,38 @@ class AIService {
       throw error;
     }
   }
+
+ async generateContentStream(prompt, cacheKey = null, onDelta) {
+   if (!this.enabled) {
+     throw new Error('AI service not available');
+   }
+
+   // If cached and no streaming requested, return cache
+   if (cacheKey && !onDelta) {
+     const cached = cacheService.getAiCache(cacheKey);
+     if (cached) return cached;
+   }
+
+   let final = '';
+   const handleDelta = (delta) => {
+     final += delta;
+     if (onDelta) onDelta(delta);
+   };
+
+   // Prefer provider streaming if available
+   if (typeof this.provider.generateTextStream === 'function') {
+     final = await this.provider.generateTextStream(prompt, handleDelta);
+   } else {
+     final = await this.provider.generateText(prompt);
+     if (onDelta) onDelta(final);
+   }
+
+   if (cacheKey) {
+     cacheService.setAiCache(cacheKey, final);
+   }
+
+   return final;
+ }
 
   async generateMovieSynopsis(movieTitle, movieOverview) {
     const crypto = require('crypto');
@@ -146,7 +188,8 @@ Analysis:`;
       
       return {
         status: 'healthy',
-        model: config.apis.gemini.model,
+        provider: this.provider?.getProviderInfo()?.name,
+        model: this.provider?.getProviderInfo()?.model,
         response: response.trim()
       };
     } catch (error) {

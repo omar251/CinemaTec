@@ -1006,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // AI Integration Features
-    async function generateNetworkInsights() {
+    async function generateNetworkInsights(useStreaming = false) {
         if (network.nodes.length === 0) {
             ui.showNotification('No network to analyze', 'error');
             return;
@@ -1019,12 +1019,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 links: network.links
             };
             
-            const analysis = await api.generateNetworkAnalysis(networkData);
-            showAIInsightsModal(analysis);
-            ui.showNotification('AI analysis generated!', 'success');
+            if (useStreaming) {
+                // Show modal first with streaming indicator
+                showAIInsightsModal('', true); // true = streaming mode
+                
+                let accumulatedText = '';
+                await api.streamNetworkAnalysis(
+                    networkData,
+                    (token) => {
+                        // onDelta: append token to modal
+                        accumulatedText += token;
+                        updateAIInsightsContent(accumulatedText, false); // false = still streaming
+                    },
+                    (finalText) => {
+                        // onDone: mark as complete
+                        updateAIInsightsContent(finalText || accumulatedText, true); // true = done
+                        ui.showNotification('AI analysis complete!', 'success');
+                    },
+                    (error) => {
+                        // onError
+                        updateAIInsightsContent('Streaming failed: ' + error.message, true);
+                        ui.showNotification('AI streaming failed: ' + error.message, 'error');
+                    }
+                );
+            } else {
+                // Original non-streaming approach
+                const analysis = await api.generateNetworkAnalysis(networkData);
+                showAIInsightsModal(analysis);
+                ui.showNotification('AI analysis generated!', 'success');
+            }
         } catch (error) {
             if (error.message.includes('AI service not available')) {
-                ui.showNotification('AI features require Gemini API key. Check server configuration.', 'error');
+                ui.showNotification('AI features require an AI provider to be configured on the server.', 'error');
                 console.log('💡 To enable AI features:');
                 console.log('1. Get API key from https://makersuite.google.com/app/apikey');
                 console.log('2. Add GEMINI_API_KEY=your_key to .env file');
@@ -1043,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showAIInsightsModal(analysis) {
+    function showAIInsightsModal(analysis, streaming = false) {
         // Create AI insights modal if it doesn't exist
         let modal = document.getElementById('aiInsightsModal');
         if (!modal) {
@@ -1068,18 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(modal);
         }
 
-        document.getElementById('aiAnalysisContent').innerHTML = `
-            <div style="background: var(--glass-bg); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gemini-accent);">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">🤖</span>
-                    <strong style="color: var(--gemini-accent);">AI Analysis</strong>
-                </div>
-                <p style="margin: 0; white-space: pre-wrap;">${analysis}</p>
-            </div>
-            <div style="margin-top: 15px; font-size: 12px; color: var(--text-secondary); text-align: center;">
-                Powered by Google Gemini AI
-            </div>
-        `;
+        updateAIInsightsContent(analysis, !streaming);
         
         modal.style.display = 'flex';
         
@@ -1097,6 +1112,95 @@ document.addEventListener('DOMContentLoaded', () => {
             closeFooterBtn.addEventListener('click', () => {
                 modal.style.display = 'none';
             });
+        }
+    }
+
+    function updateAIInsightsContent(text, isDone = true) {
+        const content = document.getElementById('aiAnalysisContent');
+        if (!content) return;
+        
+        const streamingIndicator = isDone ? '' : '<span style="color: var(--gemini-accent); animation: pulse 1.5s infinite;">●</span>';
+        
+        content.innerHTML = `
+            <div style="background: var(--glass-bg); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gemini-accent);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span style="font-size: 20px;">🤖</span>
+                    <strong style="color: var(--gemini-accent);">AI Analysis</strong>
+                    ${streamingIndicator}
+                </div>
+                <p style="margin: 0; white-space: pre-wrap;">${text || (isDone ? 'No analysis generated.' : 'Generating analysis...')}</p>
+            </div>
+            <div style="margin-top: 15px; font-size: 12px; color: var(--text-secondary); text-align: center;">
+                Powered by AI Provider
+            </div>
+        `;
+    }
+
+    // AI Provider selector
+    async function addAIProviderSelector() {
+        const controls = document.querySelector('.controls');
+        if (!controls || document.getElementById('aiProviderSelect')) return;
+
+        // Get current provider
+        const providerInfo = await api.getAIProvider();
+        
+        const selectorContainer = document.createElement('div');
+        selectorContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-left: 10px;';
+        
+        const label = document.createElement('span');
+        label.textContent = 'AI:';
+        label.style.cssText = 'font-size: 12px; color: var(--text-secondary);';
+        
+        const select = document.createElement('select');
+        select.id = 'aiProviderSelect';
+        select.style.cssText = 'padding: 4px 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-color); border-radius: 4px; font-size: 12px;';
+        
+        const options = [
+            { value: '', text: 'Auto' },
+            { value: 'gemini', text: 'Gemini' },
+            { value: 'openai', text: 'OpenAI' },
+            { value: 'groq', text: 'Groq' }
+        ];
+        
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (opt.value === providerInfo.provider) option.selected = true;
+            select.appendChild(option);
+        });
+        
+        select.addEventListener('change', async () => {
+            const newProvider = select.value;
+            ui.showLoading(true);
+            try {
+                const result = await api.setAIProvider(newProvider || 'auto');
+                if (result.success) {
+                    ui.showNotification(`AI provider switched to ${result.provider}`, 'success');
+                    // Refresh AI button state
+                    setTimeout(() => checkAIServiceAvailabilityAndAddButton(), 500);
+                } else {
+                    ui.showNotification(`Failed to switch provider: ${result.error}`, 'error');
+                    // Revert selection
+                    select.value = providerInfo.provider || '';
+                }
+            } catch (error) {
+                ui.showNotification(`Provider switch error: ${error.message}`, 'error');
+                select.value = providerInfo.provider || '';
+            } finally {
+                ui.showLoading(false);
+            }
+        });
+        
+        selectorContainer.appendChild(label);
+        selectorContainer.appendChild(select);
+        
+        // Insert near the AI button or at the end of controls
+        const aiBtn = document.getElementById('aiBtn');
+        if (aiBtn) {
+            controls.insertBefore(selectorContainer, aiBtn.nextSibling);
+        } else {
+            controls.appendChild(selectorContainer);
         }
     }
 
@@ -1141,8 +1245,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (isHealthy) {
                 // AI is working - normal button
-                aiBtn.title = 'Generate AI analysis of your network';
-                aiBtn.addEventListener('click', () => generateNetworkInsights());
+                aiBtn.title = 'Generate AI analysis of your network (streaming)';
+                aiBtn.addEventListener('click', () => generateNetworkInsights(true)); // enable streaming
             } else {
                 // AI not working - grayed out button
                 aiBtn.style.opacity = '0.5';

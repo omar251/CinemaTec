@@ -10,6 +10,8 @@ const searchRoutes = require('./search');
 const networksRoutes = require('./networks');
 const aiRoutes = require('./ai');
 const healthRoutes = require('./health');
+const aiStreamRoutes = require('./ai_stream');
+const aiProviderRoutes = require('./ai_provider');
 const cacheRoutes = require('./cache');
 const ttsRoutes = require('./tts');
 const databaseRoutes = require('./database');
@@ -19,6 +21,8 @@ router.use('/search', searchRoutes);
 router.use('/movies', moviesRoutes);
 router.use('/networks', networksRoutes);
 router.use('/ai', aiRoutes);
+router.use('/ai', aiStreamRoutes); // mounts /ai/stream and /ai/network-analysis/stream
+router.use('/ai', aiProviderRoutes); // mounts /ai/provider (GET/POST)
 router.use('/cache', cacheRoutes);
 router.use('/health', healthRoutes);
 router.use('/tts', ttsRoutes);

@@ -222,7 +222,7 @@ export async function generateNetworkAnalysis(networkData) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             if (response.status === 503) {
-                throw new Error('AI service not available - ' + (errorData.details || 'Gemini API key not configured'));
+                throw new Error('AI service not available - ' + (errorData.details || 'AI provider not configured'));
             }
             
             // Handle quota exceeded error specifically
@@ -242,7 +242,7 @@ export async function generateNetworkAnalysis(networkData) {
     }
 }
 
-export async function checkAIHealth() {
+export async function checkAIHealth() { /* returns { status, provider?, model?, ... } */
     try {
         const response = await fetch(`${apiBase}/ai/health`);
         const data = await response.json();
@@ -251,4 +251,83 @@ export async function checkAIHealth() {
         console.error('AI health check error:', error);
         return { status: 'error', error: error.message };
     }
+}
+
+// AI Provider management
+export async function getAIProvider() {
+    try {
+        const response = await fetch(`${apiBase}/ai/provider`);
+        return await response.json();
+    } catch (error) {
+        console.error('AI provider get error:', error);
+        return { provider: null, model: null, enabled: false };
+    }
+}
+
+export async function setAIProvider(provider) {
+    try {
+        const response = await fetch(`${apiBase}/ai/provider`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('AI provider set error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// SSE streaming utilities
+export function streamNetworkAnalysis(networkData, onDelta, onDone, onError) {
+    const eventSource = new EventSource('/sse-endpoint'); // not directly usable with POST
+    // Using fetch with ReadableStream instead for SSE-like POST streaming
+    
+    return fetch(`${apiBase}/ai/network-analysis/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ networkData })
+    }).then(response => {
+        if (!response.ok) throw new Error('Stream failed');
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        
+        function processChunk() {
+            return reader.read().then(({ done, value }) => {
+                if (done) {
+                    if (onDone) onDone();
+                    return;
+                }
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // keep incomplete line
+                
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        const event = line.slice(7);
+                        continue;
+                    }
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.token && onDelta) onDelta(data.token);
+                            if (data.text && onDone) onDone(data.text);
+                        } catch (e) {
+                            // ignore malformed data
+                        }
+                    }
+                }
+                
+                return processChunk();
+            });
+        }
+        
+        return processChunk();
+    }).catch(error => {
+        if (onError) onError(error);
+        throw error;
+    });
 }

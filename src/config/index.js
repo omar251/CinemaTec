@@ -25,9 +25,24 @@ const config = {
       imageBase: 'https://image.tmdb.org/t/p/w500',
       timeout: 5000
     },
+    // Backward-compatible Gemini config
     gemini: {
       key: process.env.GEMINI_API_KEY,
-      model: 'gemini-1.5-flash'
+      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
+    },
+    // Provider-agnostic AI configuration
+    ai: {
+      provider: process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : null))),
+      key: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || null,
+      model: process.env.AI_MODEL || process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || process.env.GROQ_MODEL || null,
+      openai: {
+        key: process.env.OPENAI_API_KEY,
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
+      },
+      groq: {
+        key: process.env.GROQ_API_KEY,
+        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant'
+      }
     }
   },
 
@@ -90,8 +105,11 @@ function validateConfig() {
     console.warn('[WARN] TMDB_API_KEY not provided - poster images will not be available');
   }
 
-  if (!config.apis.gemini.key) {
-    console.warn('[WARN] GEMINI_API_KEY not provided - AI features will not be available');
+  // AI config warnings
+  if (!config.apis.ai.provider) {
+    console.warn('[WARN] No AI provider configured - AI features will be disabled');
+  } else {
+    console.info(`[INFO] AI provider configured: ${config.apis.ai.provider}`);
   }
 
   if (errors.length > 0) {
