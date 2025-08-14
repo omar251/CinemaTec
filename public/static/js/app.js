@@ -85,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('centerBtn').addEventListener('click', () => network.centerNetwork());
         document.getElementById('labelsBtn').addEventListener('click', () => network.toggleLabels());
 
+        // AI Provider Selector (async)
+        setupAIProviderSelector().catch(console.error);
+
         // Mouse navigation toggle
         const mouseNavBtn = document.getElementById('mouseNavBtn');
         if (mouseNavBtn) {
@@ -1029,16 +1032,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     (token) => {
                         // onDelta: append token to modal
                         accumulatedText += token;
-                        updateAIInsightsContent(accumulatedText, false); // false = still streaming
+                        updateAIInsightsContent(accumulatedText, false).catch(console.error); // false = still streaming
                     },
                     (finalText) => {
                         // onDone: mark as complete
-                        updateAIInsightsContent(finalText || accumulatedText, true); // true = done
+                        updateAIInsightsContent(finalText || accumulatedText, true).catch(console.error); // true = done
                         ui.showNotification('AI analysis complete!', 'success');
                     },
                     (error) => {
                         // onError
-                        updateAIInsightsContent('Streaming failed: ' + error.message, true);
+                        updateAIInsightsContent('Streaming failed: ' + error.message, true).catch(console.error);
                         ui.showNotification('AI streaming failed: ' + error.message, 'error');
                     }
                 );
@@ -1094,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(modal);
         }
 
-        updateAIInsightsContent(analysis, !streaming);
+        updateAIInsightsContent(analysis, !streaming).catch(console.error);
         
         modal.style.display = 'flex';
         
@@ -1115,11 +1118,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateAIInsightsContent(text, isDone = true) {
+    async function updateAIInsightsContent(text, isDone = true) {
         const content = document.getElementById('aiAnalysisContent');
         if (!content) return;
         
         const streamingIndicator = isDone ? '' : '<span style="color: var(--gemini-accent); animation: pulse 1.5s infinite;">●</span>';
+        
+        // Get current provider info
+        let providerText = 'AI Provider';
+        try {
+            const response = await api.getAIProviders();
+            if (response.currentProvider && response.currentProvider.enabled) {
+                providerText = response.currentProvider.displayName;
+            }
+        } catch (error) {
+            console.log('Could not get provider info:', error);
+        }
         
         content.innerHTML = `
             <div style="background: var(--glass-bg); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gemini-accent);">
@@ -1131,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="margin: 0; white-space: pre-wrap;">${text || (isDone ? 'No analysis generated.' : 'Generating analysis...')}</p>
             </div>
             <div style="margin-top: 15px; font-size: 12px; color: var(--text-secondary); text-align: center;">
-                Powered by AI Provider
+                Powered by ${providerText}
             </div>
         `;
     }
@@ -1303,6 +1317,93 @@ document.addEventListener('DOMContentLoaded', () => {
         tts.stop();
         ui.showNotification('⏹️ Audio stopped', 'info');
     };
+
+    // AI Provider Selector Setup
+    async function setupAIProviderSelector() {
+        const selector = document.getElementById('aiProviderSelector');
+        if (!selector) return;
+
+        try {
+            // Load available providers
+            const response = await api.getAIProviders();
+            const { providers, currentProvider } = response;
+
+            // Clear loading option
+            selector.innerHTML = '';
+
+            // Add providers to selector
+            providers.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider.name;
+                option.textContent = `${provider.displayName} ${provider.enabled ? '✅' : '❌'}`;
+                option.disabled = !provider.enabled;
+                
+                if (currentProvider && currentProvider.name === provider.name) {
+                    option.selected = true;
+                }
+                
+                selector.appendChild(option);
+            });
+
+            // Add "No AI" option
+            const noAiOption = document.createElement('option');
+            noAiOption.value = '';
+            noAiOption.textContent = '🚫 No AI';
+            if (!currentProvider || !currentProvider.enabled) {
+                noAiOption.selected = true;
+            }
+            selector.appendChild(noAiOption);
+
+            // Handle provider change
+            selector.addEventListener('change', async (e) => {
+                const selectedProvider = e.target.value;
+                
+                if (!selectedProvider) {
+                    // User selected "No AI"
+                    ui.showNotification('AI features disabled', 'info');
+                    return;
+                }
+
+                try {
+                    ui.showNotification('Switching AI provider...', 'info');
+                    const result = await api.setAIProvider(selectedProvider);
+                    
+                    if (result.success) {
+                        ui.showNotification(`AI provider switched to ${result.provider}`, 'success');
+                        
+                        // Update the selector to reflect the change
+                        const options = selector.querySelectorAll('option');
+                        options.forEach(option => {
+                            if (option.value === selectedProvider) {
+                                option.selected = true;
+                            }
+                        });
+                    } else {
+                        ui.showNotification(`Failed to switch provider: ${result.details}`, 'error');
+                        // Revert selection
+                        setupAIProviderSelector();
+                    }
+                } catch (error) {
+                    console.error('Error switching AI provider:', error);
+                    ui.showNotification(`Error switching provider: ${error.message}`, 'error');
+                    // Revert selection
+                    setupAIProviderSelector();
+                }
+            });
+
+            // Update selector title with current status
+            if (currentProvider && currentProvider.enabled) {
+                selector.title = `Current: ${currentProvider.displayName} (${currentProvider.model})`;
+            } else {
+                selector.title = 'No AI provider configured';
+            }
+
+        } catch (error) {
+            console.error('Error setting up AI provider selector:', error);
+            selector.innerHTML = '<option value="">🚫 AI Error</option>';
+            selector.title = 'Error loading AI providers';
+        }
+    }
 
     setupGlobalEventListeners();
     checkAIAvailability(); // Check if AI features are available

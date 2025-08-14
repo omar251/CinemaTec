@@ -114,6 +114,52 @@
             align-items: center;
         }
 
+        .ai-provider-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .ai-provider-selector:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        .ai-provider-selector:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--gemini-accent);
+        }
+
+        .ai-provider-selector option {
+            background: var(--secondary-color);
+            color: var(--text-color);
+            padding: 8px;
+        }
+
+        .ai-status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: var(--warning-color);
+        }
+
+        .ai-status-indicator.healthy {
+            background: var(--success-color);
+        }
+
+        .ai-status-indicator.error {
+            background: var(--accent-color);
+        }
+
         .stats {
             background: rgba(0, 0, 0, 0.3);
             padding: 5px 15px;
@@ -976,6 +1022,9 @@
         </div>
         <div class="controls">
             <div class="stats" id="networkStats">0 movies, 0 connections</div>
+            <select class="ai-provider-selector" id="aiProviderSelector" title="Select AI Provider">
+                <option value="">🤖 Loading...</option>
+            </select>
             <button class="control-btn" id="saveBtn">💾 Save</button>
             <button class="control-btn" id="loadBtn">📁 Load</button>
             <button class="control-btn" id="clearBtn">🗑️ Clear</button>

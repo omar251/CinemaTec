@@ -138,6 +138,27 @@ router.post('/network-analysis', async (req, res) => {
   }
 });
 
+// Get available AI providers and current status
+router.get('/providers', async (req, res) => {
+  try {
+    const providers = await aiService.getAvailableProviders();
+    const currentProvider = await aiService.getCurrentProvider();
+    
+    res.json({
+      success: true,
+      providers,
+      currentProvider
+    });
+  } catch (error) {
+    logger.error(`Failed to get AI providers: ${error.message}`);
+    res.status(500).json({
+      error: 'Failed to get AI providers',
+      details: error.message
+    });
+  }
+});
+
+
 // AI service health check
 router.get('/health', async (req, res) => {
   try {

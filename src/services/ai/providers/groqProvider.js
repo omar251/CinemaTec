@@ -4,7 +4,8 @@
 const BaseAIProvider = require('./baseProvider');
 let Groq;
 try {
-  Groq = require('groq-sdk');
+  // Try both import styles for compatibility
+  Groq = require('groq-sdk').default || require('groq-sdk');
 } catch (_) {
   // optional dependency not installed by default
 }
@@ -15,7 +16,7 @@ class GroqProvider extends BaseAIProvider {
     this.name = 'groq';
 
     const key = process.env.GROQ_API_KEY || config?.apis?.groq?.key || config?.apis?.ai?.groq?.key || config?.apis?.ai?.key;
-    const model = process.env.GROQ_MODEL || config?.apis?.groq?.model || config?.apis?.ai?.groq?.model || config?.apis?.ai?.model || 'llama-3.1-8b-instant';
+    const model = process.env.GROQ_MODEL || config?.apis?.groq?.model || config?.apis?.ai?.groq?.model || config?.apis?.ai?.model || 'llama-3.3-70b-versatile';
 
     if (!key || !Groq) {
       logger && logger.warn('Groq provider not available - missing API key or package');

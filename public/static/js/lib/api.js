@@ -264,24 +264,10 @@ export async function getAIProvider() {
     }
 }
 
-export async function setAIProvider(provider) {
-    try {
-        const response = await fetch(`${apiBase}/ai/provider`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('AI provider set error:', error);
-        return { success: false, error: error.message };
-    }
-}
 
 // SSE streaming utilities
 export function streamNetworkAnalysis(networkData, onDelta, onDone, onError) {
-    const eventSource = new EventSource('/sse-endpoint'); // not directly usable with POST
-    // Using fetch with ReadableStream instead for SSE-like POST streaming
+    // Using fetch with ReadableStream for POST streaming
     
     return fetch(`${apiBase}/ai/network-analysis/stream`, {
         method: 'POST',
@@ -330,4 +316,41 @@ export function streamNetworkAnalysis(networkData, onDelta, onDone, onError) {
         if (onError) onError(error);
         throw error;
     });
+}
+
+// AI Provider Management
+export async function getAIProviders() {
+    try {
+        const response = await fetch(`${apiBase}/ai/providers`);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get AI providers');
+        }
+        
+        return response.json();
+    } catch (error) {
+        console.error('Error getting AI providers:', error);
+        throw error;
+    }
+}
+
+export async function setAIProvider(provider) {
+    try {
+        const response = await fetch(`${apiBase}/ai/provider`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to set AI provider');
+        }
+        
+        return response.json();
+    } catch (error) {
+        console.error('Error setting AI provider:', error);
+        throw error;
+    }
 }

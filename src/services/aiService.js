@@ -28,13 +28,75 @@ class AIService {
        this.enabled = true;
        this.currentProviderName = newProvider.getProviderInfo()?.name;
        logger.info(`AI provider switched to ${this.currentProviderName}`);
-       return { success: true, provider: this.currentProviderName };
+       return { success: true, provider: this.currentProviderName, status: 'healthy' };
      }
      return { success: false, error: 'Provider not available or not enabled' };
    } catch (err) {
      logger.error(`Failed to switch AI provider: ${err.message}`);
      return { success: false, error: err.message };
    }
+ }
+
+ // Get available AI providers
+ async getAvailableProviders() {
+   const GeminiProvider = require('./ai/providers/geminiProvider');
+   const OpenAIProvider = require('./ai/providers/openaiProvider');
+   const GroqProvider = require('./ai/providers/groqProvider');
+
+   const providers = [];
+
+   // Test each provider
+   const gemini = new GeminiProvider(config, logger);
+   providers.push({
+     name: 'gemini',
+     displayName: '🧠 Gemini',
+     enabled: gemini.isEnabled(),
+     model: gemini.model || 'gemini-1.5-flash'
+   });
+
+   const openai = new OpenAIProvider(config, logger);
+   providers.push({
+     name: 'openai',
+     displayName: '🤖 OpenAI',
+     enabled: openai.isEnabled(),
+     model: openai.model || 'gpt-4o-mini'
+   });
+
+   const groq = new GroqProvider(config, logger);
+   providers.push({
+     name: 'groq',
+     displayName: '⚡ Groq',
+     enabled: groq.isEnabled(),
+     model: groq.model || 'llama-3.3-70b-versatile'
+   });
+
+   return providers;
+ }
+
+ // Get current provider info
+ getCurrentProvider() {
+   if (!this.provider) {
+     return { name: null, enabled: false, status: 'disabled' };
+   }
+
+   const info = this.provider.getProviderInfo();
+   return {
+     name: info.name,
+     displayName: this.getProviderDisplayName(info.name),
+     enabled: info.enabled,
+     model: info.model,
+     status: info.enabled ? 'healthy' : 'disabled'
+   };
+ }
+
+ // Helper to get display name for provider
+ getProviderDisplayName(name) {
+   const displayNames = {
+     'gemini': '🧠 Gemini',
+     'openai': '🤖 OpenAI',
+     'groq': '⚡ Groq'
+   };
+   return displayNames[name] || `🤖 ${name}`;
  }
 
   async generateContent(prompt, cacheKey = null) {
