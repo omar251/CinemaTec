@@ -323,6 +323,19 @@ document.addEventListener('DOMContentLoaded', () => {
             aiBtn.addEventListener('click', () => generateNetworkInsights());
         }
 
+        // Add AI Chat button
+        const aiChatBtn = document.createElement('button');
+        aiChatBtn.id = 'aiChatBtn';
+        aiChatBtn.className = 'control-btn';
+        aiChatBtn.innerHTML = '💬 AI Chat';
+        aiChatBtn.title = 'Chat with AI for recommendations';
+        aiChatBtn.addEventListener('click', showChatModal);
+        // Insert near aiBtn
+        const controls = document.querySelector('.controls');
+        if (controls) {
+            controls.appendChild(aiChatBtn);
+        }
+
         document.getElementById('closeSaveBtn').addEventListener('click', closeSaveDialog);
         document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveDialog);
         document.getElementById('confirmSaveBtn').addEventListener('click', saveNetwork);
@@ -1215,6 +1228,203 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function showChatModal() {
+        let modal = document.getElementById('aiChatModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'aiChatModal';
+            modal.className = 'modal';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
+                    <div class="modal-header">
+                        <h3>💬 AI Chat</h3>
+                        <button class="close-btn" id="closeAiChatBtn">&times;</button>
+                    </div>
+                    <div class="modal-body" style="flex-grow: 1; overflow-y: auto; padding: 15px; background: var(--background-color-dark); border-radius: 8px; margin-bottom: 10px;">
+                        <div id="chatMessages" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Chat messages will be appended here -->
+                            <div class="chat-message ai-message">
+                                <div class="message-bubble">Hello! How can I help you with movie recommendations today?</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="padding-top: 0;">
+                        <div style="display: flex; width: 100%; gap: 10px;">
+                            <input type="text" id="chatInput" placeholder="Type your message..." style="flex-grow: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-color);">
+                            <button class="control-btn" id="sendChatBtn" style="padding: 10px 15px; background: var(--accent-color); color: white; border-radius: 8px; border: none;">Send</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Event listeners for close buttons
+            document.getElementById('closeAiChatBtn').addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+
+            // Chat logic
+            const chatInput = document.getElementById('chatInput');
+            const sendChatBtn = document.getElementById('sendChatBtn');
+            const chatMessagesContainer = document.getElementById('chatMessages');
+
+            if (sendChatBtn && chatInput && chatMessagesContainer) {
+                sendChatBtn.addEventListener('click', sendMessage);
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+        }
+        modal.style.display = 'flex';
+        document.getElementById('chatInput').focus();
+    }
+
+    async function updateAIInsightsContent(text, isDone = true) {
+        // Create AI insights modal if it doesn't exist
+        let modal = document.getElementById('aiInsightsModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'aiInsightsModal';
+            modal.className = 'modal';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🤖 AI Network Analysis</h3>
+                        <button class="close-btn" id="closeAiInsightsBtn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="aiAnalysisContent" style="line-height: 1.6; color: var(--text-color);"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="control-btn" id="ai-insights-tts-listen-btn" style="background: var(--accent-color); border: none; color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                                🔊 Listen to Analysis
+                            </button>
+                            <button class="control-btn" id="ai-insights-tts-stop-btn" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                                ⏹️ Stop Audio
+                            </button>
+                        </div>
+                        <button class="control-btn" id="closeAiInsightsFooterBtn">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        updateAIInsightsContent(analysis, !streaming).catch(console.error);
+        
+        modal.style.display = 'flex';
+        
+        // Add event listeners for close buttons
+        const closeBtn = document.getElementById('closeAiInsightsBtn');
+        const closeFooterBtn = document.getElementById('closeAiInsightsFooterBtn');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        if (closeFooterBtn) {
+            closeFooterBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+
+        // Add TTS button event listeners for AI insights (remove existing first to prevent duplicates)
+        const aiInsightsTtsListenBtn = document.getElementById('ai-insights-tts-listen-btn');
+        const aiInsightsTtsStopBtn = document.getElementById('ai-insights-tts-stop-btn');
+
+        if (aiInsightsTtsListenBtn) {
+            // Remove any existing event listeners by cloning the element
+            const newListenBtn = aiInsightsTtsListenBtn.cloneNode(true);
+            aiInsightsTtsListenBtn.parentNode.replaceChild(newListenBtn, aiInsightsTtsListenBtn);
+            
+            newListenBtn.addEventListener('click', async () => {
+                try {
+                    // Better text extraction - get all text content from the analysis
+                    const analysisContainer = document.getElementById('aiAnalysisContent');
+                    if (!analysisContainer) {
+                        ui.showNotification('No AI analysis content found', 'error');
+                        return;
+                    }
+                    
+                    // Extract text from the analysis paragraph, handling multiple possible structures
+                    let insightsText = '';
+                    const paragraph = analysisContainer.querySelector('p');
+                    if (paragraph) {
+                        insightsText = paragraph.textContent || paragraph.innerText || '';
+                    } else {
+                        // Fallback: get all text content
+                        insightsText = analysisContainer.textContent || analysisContainer.innerText || '';
+                    }
+                    
+                    // Clean up the text
+                    insightsText = insightsText.trim();
+                    
+                    // Remove any "No analysis generated" or loading messages
+                    if (insightsText.includes('No analysis generated') || 
+                        insightsText.includes('Generating analysis') || 
+                        insightsText.includes('Loading') ||
+                        insightsText.length < 10) {
+                        ui.showNotification('No AI analysis available to read', 'warning');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    ui.showNotification('🔊 Starting AI insights audio...', 'info');
+                    newListenBtn.disabled = true;
+                    newListenBtn.textContent = '🔊 Loading...';
+                    
+                    if (window.playAIInsights) {
+                        await window.playAIInsights(insightsText);
+                        ui.showNotification('🎵 AI insights audio playback started', 'success');
+                    } else {
+                        ui.showNotification('TTS function not available', 'error');
+                    }
+                } catch (error) {
+                    console.error('AI Insights TTS Error:', error);
+                    ui.showNotification(`TTS Error: ${error.message}`, 'error');
+                } finally {
+                    // Reset button state
+                    newListenBtn.disabled = false;
+                    newListenBtn.textContent = '🔊 Listen';
+                }
+            });
+        }
+
+        if (aiInsightsTtsStopBtn) {
+            // Remove any existing event listeners by cloning the element
+            const newStopBtn = aiInsightsTtsStopBtn.cloneNode(true);
+            aiInsightsTtsStopBtn.parentNode.replaceChild(newStopBtn, aiInsightsTtsStopBtn);
+            
+            newStopBtn.addEventListener('click', () => {
+                try {
+                    if (window.stopTTS) {
+                        window.stopTTS();
+                        ui.showNotification('⏹️ Audio stopped', 'info');
+                        
+                        // Reset listen button state if it exists
+                        const currentListenBtn = document.getElementById('ai-insights-tts-listen-btn');
+                        if (currentListenBtn) {
+                            currentListenBtn.disabled = false;
+                            currentListenBtn.textContent = '🔊 Listen';
+                        }
+                    } else {
+                        ui.showNotification('TTS stop function not available', 'error');
+                    }
+                } catch (error) {
+                    console.error('TTS Stop Error:', error);
+                    ui.showNotification('Error stopping audio', 'error');
+                }
+            });
+        }
+    }
+
     async function updateAIInsightsContent(text, isDone = true) {
         const content = document.getElementById('aiAnalysisContent');
         if (!content) return;
@@ -1537,6 +1747,55 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error setting up AI provider selector:', error);
             selector.innerHTML = '<option value="">🚫 AI Error</option>';
             selector.title = 'Error loading AI providers';
+        }
+    }
+
+    // Global chat history
+    let chatHistory = [{ role: 'system', content: 'You are a helpful assistant that provides movie recommendations.' }];
+
+    // Chat logic
+    const chatInput = document.getElementById('chatInput');
+    const sendChatBtn = document.getElementById('sendChatBtn');
+    const chatMessagesContainer = document.getElementById('chatMessages');
+
+    if (sendChatBtn && chatInput && chatMessagesContainer) {
+        sendChatBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+
+    function displayMessage(role, content) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message', `${role}-message`);
+        messageElement.innerHTML = `<div class="message-bubble">${content}</div>`;
+        document.getElementById('chatMessages').appendChild(messageElement); // Changed
+        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight; // Changed
+    }
+
+    async function sendMessage() {
+        const userMessage = document.getElementById('chatInput').value.trim(); // Changed
+        if (userMessage === '') return;
+
+        displayMessage('user', userMessage);
+        document.getElementById('chatInput').value = ''; // Changed
+
+        chatHistory.push({ role: 'user', content: userMessage });
+
+        ui.showLoading(true); // Show loading indicator
+
+        try {
+            const response = await api.sendChatMessage(chatHistory); // Call new API function
+            const aiResponse = response.response;
+            displayMessage('ai', aiResponse);
+            chatHistory.push({ role: 'assistant', content: aiResponse });
+        } catch (error) {
+            console.error('AI Chat Error:', error);
+            displayMessage('ai', 'Sorry, I am having trouble connecting to the AI. Please try again later.');
+        } finally {
+            ui.showLoading(false); // Hide loading indicator
         }
     }
 

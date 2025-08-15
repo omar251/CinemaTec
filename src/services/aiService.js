@@ -233,9 +233,27 @@ Provide a brief analysis (2-3 sentences) about:
 - Notable patterns or clusters
 - What this network reveals about movie relationships
 
-Analysis:`;
+Analysis:`
 
     return this.generateContent(prompt, cacheKey);
+  }
+
+  async getChatCompletion(messages) {
+    if (!this.enabled) {
+      throw new Error('AI service not available');
+    }
+    if (typeof this.provider.chatCompletion !== 'function') {
+      throw new Error('Current AI provider does not support chat completions.');
+    }
+    try {
+      logger.debug('Generating AI chat completion', { messageCount: messages.length });
+      const response = await this.provider.chatCompletion(messages);
+      logger.debug('AI chat completion generated successfully');
+      return response;
+    } catch (error) {
+      logger.error('AI chat completion failed', { error: error.message });
+      throw error;
+    }
   }
 
   // Health check for AI service

@@ -222,4 +222,42 @@ router.post('/insights/tts', async (req, res) => {
   }
 });
 
+// Chat with AI
+router.post('/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Messages array is required' });
+    }
+
+    logger.info(`AI chat request received with ${messages.length} messages`);
+
+    const chatResponse = await aiService.getChatCompletion(messages);
+
+    res.json({
+      success: true,
+      response: chatResponse.trim()
+    });
+
+  } catch (error) {
+    logger.error(`AI chat failed: ${error.message}`, {
+      messageCount: req.body.messages?.length,
+      errorStack: error.stack
+    });
+
+    if (error.message.includes('AI service not available')) {
+      return res.status(503).json({
+        error: 'AI service not available',
+        details: 'AI provider not configured or does not support chat completions.'
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to get AI chat response',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;

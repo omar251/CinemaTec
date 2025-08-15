@@ -83,6 +83,35 @@ class GroqProvider extends BaseAIProvider {
     if (onDelta) onDelta(text);
     return text;
   }
+
+  async chatCompletion(messages) {
+    if (!this.enabled) throw new Error("AI provider not available");
+    const url = "https://api.groq.com/openai/v1/chat/completions";
+    const headers = {
+      Authorization: `Bearer ${this.key}`,
+      "Content-Type": "application/json",
+    };
+    const data = {
+      model: this.model,
+      messages: messages,
+      temperature: 0.7,
+    };
+
+    try {
+      const res = await axios.post(url, data, { headers });
+      return res.data.choices?.[0]?.message?.content?.trim() || "";
+    } catch (error) {
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.error?.message?.includes("model")
+      ) {
+        throw new Error(
+          `Invalid Groq model '${this.model}': ${error.response.data.error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
 }
 
 module.exports = GroqProvider;
