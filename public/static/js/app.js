@@ -1240,7 +1240,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="modal-content" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
                     <div class="modal-header">
                         <h3>💬 AI Chat</h3>
-                        <button class="close-btn" id="closeAiChatBtn">&times;</button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="control-btn" id="clearChatBtn" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-color); padding: 6px 10px; border-radius: 6px; font-size: 12px;" title="Clear conversation history">
+                                🗑️ Clear
+                            </button>
+                            <button class="close-btn" id="closeAiChatBtn">&times;</button>
+                        </div>
                     </div>
                     <div class="modal-body" style="flex-grow: 1; overflow-y: auto; padding: 15px; background: var(--background-color-dark); border-radius: 8px; margin-bottom: 10px;">
                         <div id="chatMessages" style="display: flex; flex-direction: column; gap: 10px;">
@@ -1263,6 +1268,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Event listeners for close buttons
             document.getElementById('closeAiChatBtn').addEventListener('click', () => {
                 modal.style.display = 'none';
+            });
+
+            // Clear chat button
+            document.getElementById('clearChatBtn').addEventListener('click', () => {
+                clearChatConversation();
             });
 
             // Chat logic
@@ -1827,6 +1837,47 @@ Always be helpful and provide detailed explanations for your recommendations.`
         html = html.replace(/\n/g, ' ');
 
         return html;
+    }
+
+    function clearChatConversation() {
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to clear the conversation? This will remove all chat history.')) {
+            // Reset chat history to just the system message
+            chatHistory = [{ 
+                role: 'system', 
+                content: `You are a movie recommendation expert. When providing movie recommendations:
+
+1. Always include the release year in parentheses after the movie title
+2. Format recommendations as numbered lists or tables when possible
+3. Use this format: "Movie Title (Year)" or in tables with Title and Year columns
+4. Be specific about why movies are recommended
+5. Consider themes, genres, directors, and actors when making connections
+6. If asked about childhood trauma movies, focus on films that handle the subject thoughtfully
+
+Example formats:
+- "The Pursuit of Happyness (2006)"
+- "Room (2015)" 
+- Tables with | Title | Year | columns
+
+Always be helpful and provide detailed explanations for your recommendations.` 
+            }];
+
+            // Clear the chat messages display
+            const chatMessagesContainer = document.getElementById('chatMessages');
+            if (chatMessagesContainer) {
+                chatMessagesContainer.innerHTML = `
+                    <div class="chat-message ai-message">
+                        <div class="message-bubble">Hello! How can I help you with movie recommendations today?</div>
+                    </div>
+                `;
+            }
+
+            // Clear any extracted movies
+            extractedMovies = [];
+
+            // Show notification
+            ui.showNotification('Conversation cleared', 'info');
+        }
     }
 
     function displayMessage(role, content) {
