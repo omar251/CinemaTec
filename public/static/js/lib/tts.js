@@ -104,8 +104,9 @@ class TTSManager {
         }
 
         try {
-            // Stop any currently playing audio
+            // Stop any currently playing audio and wait a moment for cleanup
             this.stop();
+            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for cleanup
 
             const response = await fetch('/api/tts/synthesize', {
                 method: 'POST',
@@ -146,8 +147,9 @@ class TTSManager {
         }
 
         try {
-            // Stop any currently playing audio
+            // Stop any currently playing audio and wait a moment for cleanup
             this.stop();
+            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for cleanup
 
             const response = await fetch('/api/tts/movie-overview', {
                 method: 'POST',
@@ -189,8 +191,9 @@ class TTSManager {
         }
 
         try {
-            // Stop any currently playing audio
+            // Stop any currently playing audio and wait a moment for cleanup
             this.stop();
+            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for cleanup
 
             const response = await fetch('/api/ai/insights/tts', {
                 method: 'POST',
@@ -412,10 +415,17 @@ class TTSManager {
         if (this.currentAudio) {
             this.currentAudio.pause();
             this.currentAudio.currentTime = 0;
+            
+            // Clean up the audio object completely
+            this.currentAudio.src = '';
+            this.currentAudio.load(); // Reset the audio element
             this.currentAudio = null;
         }
         
         this.isPlaying = false;
+        
+        // Force cleanup of any remaining audio contexts
+        console.log('🔇 Audio playback stopped and cleaned up');
     }
 
     // Pause current playback

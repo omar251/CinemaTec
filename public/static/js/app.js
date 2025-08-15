@@ -1125,27 +1125,91 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Add TTS button event listeners for AI insights
+        // Add TTS button event listeners for AI insights (remove existing first to prevent duplicates)
         const aiInsightsTtsListenBtn = document.getElementById('ai-insights-tts-listen-btn');
         const aiInsightsTtsStopBtn = document.getElementById('ai-insights-tts-stop-btn');
 
         if (aiInsightsTtsListenBtn) {
-            aiInsightsTtsListenBtn.addEventListener('click', async () => {
-                const insightsText = document.getElementById('aiAnalysisContent').querySelector('p').textContent;
-                if (window.playAIInsights) {
-                    await window.playAIInsights(insightsText);
-                } else {
-                    ui.showNotification('TTS function not available', 'error');
+            // Remove any existing event listeners by cloning the element
+            const newListenBtn = aiInsightsTtsListenBtn.cloneNode(true);
+            aiInsightsTtsListenBtn.parentNode.replaceChild(newListenBtn, aiInsightsTtsListenBtn);
+            
+            newListenBtn.addEventListener('click', async () => {
+                try {
+                    // Better text extraction - get all text content from the analysis
+                    const analysisContainer = document.getElementById('aiAnalysisContent');
+                    if (!analysisContainer) {
+                        ui.showNotification('No AI analysis content found', 'error');
+                        return;
+                    }
+                    
+                    // Extract text from the analysis paragraph, handling multiple possible structures
+                    let insightsText = '';
+                    const paragraph = analysisContainer.querySelector('p');
+                    if (paragraph) {
+                        insightsText = paragraph.textContent || paragraph.innerText || '';
+                    } else {
+                        // Fallback: get all text content
+                        insightsText = analysisContainer.textContent || analysisContainer.innerText || '';
+                    }
+                    
+                    // Clean up the text
+                    insightsText = insightsText.trim();
+                    
+                    // Remove any "No analysis generated" or loading messages
+                    if (insightsText.includes('No analysis generated') || 
+                        insightsText.includes('Generating analysis') || 
+                        insightsText.includes('Loading') ||
+                        insightsText.length < 10) {
+                        ui.showNotification('No AI analysis available to read', 'warning');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    ui.showNotification('🔊 Starting AI insights audio...', 'info');
+                    newListenBtn.disabled = true;
+                    newListenBtn.textContent = '🔊 Loading...';
+                    
+                    if (window.playAIInsights) {
+                        await window.playAIInsights(insightsText);
+                        ui.showNotification('🎵 AI insights audio playback started', 'success');
+                    } else {
+                        ui.showNotification('TTS function not available', 'error');
+                    }
+                } catch (error) {
+                    console.error('AI Insights TTS Error:', error);
+                    ui.showNotification(`TTS Error: ${error.message}`, 'error');
+                } finally {
+                    // Reset button state
+                    newListenBtn.disabled = false;
+                    newListenBtn.textContent = '🔊 Listen';
                 }
             });
         }
 
         if (aiInsightsTtsStopBtn) {
-            aiInsightsTtsStopBtn.addEventListener('click', () => {
-                if (window.stopTTS) {
-                    window.stopTTS();
-                } else {
-                    ui.showNotification('TTS stop function not available', 'error');
+            // Remove any existing event listeners by cloning the element
+            const newStopBtn = aiInsightsTtsStopBtn.cloneNode(true);
+            aiInsightsTtsStopBtn.parentNode.replaceChild(newStopBtn, aiInsightsTtsStopBtn);
+            
+            newStopBtn.addEventListener('click', () => {
+                try {
+                    if (window.stopTTS) {
+                        window.stopTTS();
+                        ui.showNotification('⏹️ Audio stopped', 'info');
+                        
+                        // Reset listen button state if it exists
+                        const currentListenBtn = document.getElementById('ai-insights-tts-listen-btn');
+                        if (currentListenBtn) {
+                            currentListenBtn.disabled = false;
+                            currentListenBtn.textContent = '🔊 Listen';
+                        }
+                    } else {
+                        ui.showNotification('TTS stop function not available', 'error');
+                    }
+                } catch (error) {
+                    console.error('TTS Stop Error:', error);
+                    ui.showNotification('Error stopping audio', 'error');
                 }
             });
         }
@@ -1353,12 +1417,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.playAIInsights = async (insightsText) => {
         try {
-            ui.showNotification('🔊 Starting AI insights audio...', 'info');
-            await tts.playAIInsights(insightsText);
-            ui.showNotification('🎵 AI insights audio playback started', 'success');
+            if (!insightsText || insightsText.trim().length === 0) {
+                ui.showNotification('No AI insights text to read', 'warning');
+                return;
+            }
+            
+            // Clean and prepare the text
+            const cleanText = insightsText.trim();
+            
+            // Check if TTS is available
+            if (!tts.isAvailable) {
+                ui.showNotification('TTS service not available', 'error');
+                return;
+            }
+            
+            console.log('🔊 Playing AI insights:', cleanText.substring(0, 100) + '...');
+            await tts.playAIInsights(cleanText);
+            
         } catch (error) {
             console.error('AI Insights TTS Error:', error);
-            ui.showNotification(`AI Insights Audio failed: ${error.message}`, 'error');
+            
+            // Provide more specific error messages
+            let errorMessage = 'AI insights TTS failed';
+            if (error.message.includes('not available')) {
+                errorMessage = 'TTS service not available';
+            } else if (error.message.includes('synthesis failed')) {
+                errorMessage = 'Audio synthesis failed';
+            } else if (error.message.includes('playback failed')) {
+                errorMessage = 'Audio playback failed';
+            } else {
+                errorMessage = `TTS Error: ${error.message}`;
+            }
+            
+            ui.showNotification(errorMessage, 'error');
         }
     };
 
