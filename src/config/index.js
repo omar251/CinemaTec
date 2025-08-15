@@ -27,22 +27,22 @@ const config = {
     },
     // Backward-compatible Gemini config
     gemini: {
-      key: process.env.GEMINI_API_KEY,
-      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
-    },
-    // Provider-agnostic AI configuration
-    ai: {
-      provider: process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : null))),
-      key: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || null,
-      model: process.env.AI_MODEL || process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || process.env.GROQ_MODEL || null,
-      openai: {
-        key: process.env.OPENAI_API_KEY,
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
+        key: process.env.GEMINI_API_KEY,
+        model: process.env.GEMINI_MODEL
       },
-      groq: {
-        key: process.env.GROQ_API_KEY,
-        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant'
-      }
+      // Provider-agnostic AI configuration
+      ai: {
+        provider: process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : (process.env.OPENAI_API_KEY ? 'openai' : (process.env.GROQ_API_KEY ? 'groq' : null))),
+        key: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || null,
+        model: process.env.AI_MODEL || process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || process.env.GROQ_MODEL || null,
+        openai: {
+          key: process.env.OPENAI_API_KEY,
+          model: process.env.OPENAI_MODEL
+        },
+        groq: {
+          key: process.env.GROQ_API_KEY,
+          model: process.env.GROQ_MODEL
+        }
     }
   },
 
