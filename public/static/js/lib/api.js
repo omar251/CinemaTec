@@ -355,24 +355,24 @@ export async function setAIProvider(provider) {
     }
 }
 
+// AI Chat functionality
 export async function sendChatMessage(messages) {
     try {
         const response = await fetch(`${apiBase}/ai/chat`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages })
         });
-
+        
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to send chat message');
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get AI chat response');
         }
-
-        return await response.json();
+        
+        return response.json();
     } catch (error) {
         console.error('Chat message error:', error);
         throw error;
     }
 }
+

@@ -261,3 +261,19 @@
 #aiChatModal #sendChatBtn:hover {
     background-color: var(--accent-color-hover);
 }
+
+.add-to-network-btn {
+    margin-top: 10px;
+    background-color: var(--gemini-accent);
+    color: var(--primary-color);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-weight: bold;
+}
+
+.add-to-network-btn:hover {
+    background-color: #f0d54f; /* Slightly darker yellow on hover */
+}

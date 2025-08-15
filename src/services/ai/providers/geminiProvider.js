@@ -40,6 +40,23 @@ class GeminiProvider extends BaseAIProvider {
     const response = await result.response;
     return response.text();
   }
+
+  // Chat completion method for compatibility
+  async chatCompletion(messages) {
+    if (!this.enabled) {
+      throw new Error('Gemini provider not enabled');
+    }
+
+    // Convert messages to a single prompt
+    const prompt = messages.map(msg => {
+      if (msg.role === 'user') return msg.content;
+      if (msg.role === 'assistant') return `Assistant: ${msg.content}`;
+      if (msg.role === 'system') return `System: ${msg.content}`;
+      return msg.content;
+    }).join('\n\n');
+
+    return await this.generateText(prompt);
+  }
 }
 
 module.exports = GeminiProvider;

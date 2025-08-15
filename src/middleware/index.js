@@ -56,6 +56,7 @@ function setCacheHeaders(req, res, next) {
 
 // Error handling middleware
 function errorHandler(err, req, res, next) {
+  console.log('--- ERROR HANDLER HIT ---'); // New log
   logger.error(`Unhandled error: ${err.message}`, {
     stack: err.stack,
     path: req.path,
@@ -74,6 +75,7 @@ function errorHandler(err, req, res, next) {
 
 // 404 handler
 function notFoundHandler(req, res) {
+  console.log('--- 404 HANDLER HIT ---'); // New log
   logger.warn(`404 - Route not found: ${req.method} ${req.path}`);
   res.status(404).json({
     error: 'Route not found',

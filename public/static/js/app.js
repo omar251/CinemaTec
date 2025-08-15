@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchTimeout;
     let recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
     let isSearchDropdownOpen = false;
+    let extractedMovies = []; // Initialize extractedMovies here
 
     function setupGlobalEventListeners() {
         // Enhanced search with debouncing and autocomplete
@@ -1751,7 +1752,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Global chat history
-    let chatHistory = [{ role: 'system', content: 'You are a helpful assistant that provides movie recommendations.' }];
+    let chatHistory = [{ 
+        role: 'system', 
+        content: `You are a movie recommendation expert. When providing movie recommendations:
+
+1. Always include the release year in parentheses after the movie title
+2. Format recommendations as numbered lists or tables when possible
+3. Use this format: "Movie Title (Year)" or in tables with Title and Year columns
+4. Be specific about why movies are recommended
+5. Consider themes, genres, directors, and actors when making connections
+6. If asked about childhood trauma movies, focus on films that handle the subject thoughtfully
+
+Example formats:
+- "The Pursuit of Happyness (2006)"
+- "Room (2015)" 
+- Tables with | Title | Year | columns
+
+Always be helpful and provide detailed explanations for your recommendations.` 
+    }];
 
     // Chat logic
     const chatInput = document.getElementById('chatInput');
@@ -1767,36 +1785,359 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatMarkdownToHtml(markdownText) {
+        let html = markdownText;
+
+        // Convert bold: **text**
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Convert italics: *text*
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+        // Convert headings: # Heading, ## Subheading, ### Sub-subheading
+        html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+
+        // Convert lists: - item
+        // This is a basic conversion and assumes list items are on new lines
+        const listItems = html.match(/^- (.*$)/gm);
+        if (listItems) {
+            let ulHtml = '<ul>';
+            listItems.forEach(item => {
+                ulHtml += `<li>${item.substring(2).trim()}</li>`;
+            });
+            ulHtml += '</ul>';
+            html = html.replace(/^- (.*$)/gm, '').replace(/\n\n+/g, '\n'); // Remove original list lines and extra newlines
+            html = html.replace(listItems[0], ulHtml); // Replace the first list item with the full ul
+        }
+
+        // Convert horizontal rule: ---
+        html = html.replace(/^---\s*$/gm, '<hr>');
+
+        // Convert multiple newlines to paragraphs, but avoid wrapping existing block-level elements
+        html = html.split('\n\n').map(paragraph => {
+            if (paragraph.trim() === '' || paragraph.startsWith('<h') || paragraph.startsWith('<ul') || paragraph.startsWith('<hr>')) {
+                return paragraph;
+            }
+            return `<p>${paragraph.trim()}</p>`;
+        }).join('');
+
+        // Clean up any remaining single newlines within paragraphs
+        html = html.replace(/\n/g, ' ');
+
+        return html;
+    }
+
     function displayMessage(role, content) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', `${role}-message`);
-        messageElement.innerHTML = `<div class="message-bubble">${content}</div>`;
+        if (role === 'ai') {
+            messageElement.innerHTML = `<div class="message-bubble">${formatMarkdownToHtml(content)}</div>`;
+        } else {
+            messageElement.innerHTML = `<div class="message-bubble">${content}</div>`; // For user messages, just display as is
+        }
         document.getElementById('chatMessages').appendChild(messageElement); // Changed
         document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight; // Changed
     }
 
     async function sendMessage() {
-        const userMessage = document.getElementById('chatInput').value.trim(); // Changed
+        const userMessage = document.getElementById('chatInput').value.trim();
         if (userMessage === '') return;
 
         displayMessage('user', userMessage);
-        document.getElementById('chatInput').value = ''; // Changed
+        document.getElementById('chatInput').value = '';
 
         chatHistory.push({ role: 'user', content: userMessage });
 
-        ui.showLoading(true); // Show loading indicator
+        ui.showLoading(true);
 
         try {
-            const response = await api.sendChatMessage(chatHistory); // Call new API function
+            const response = await api.sendChatMessage(chatHistory);
             const aiResponse = response.response;
-            displayMessage('ai', aiResponse);
+
+            // --- Enhanced movie extraction from AI response ---
+            extractedMovies = []; // Clear previous extractions
+            
+            // Method 1: Extract from markdown tables
+            const tableRegex = /\|\s*#\s*\|\s*(?:Title|Film)\s*\|\s*Year\s*\|[\s\S]*?\n\|[-\s|]*\|\s*\n([\s\S]*?)(?=\n\n|\n---|\n\|(?!\s*\d)|\n[A-Z]|\n\*|$)/i;
+            const tableMatch = aiResponse.match(tableRegex);
+            
+            if (tableMatch && tableMatch[1]) {
+                const tableRows = tableMatch[1].trim().split('\n');
+                tableRows.forEach(row => {
+                    const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
+                    if (cells.length >= 3) {
+                        const title = cells[1].replace(/\*\*/g, '').trim(); // Remove markdown bold
+                        const yearMatch = cells[2].match(/(\d{4})/);
+                        const year = yearMatch ? yearMatch[1] : null;
+                        if (title && year && !title.match(/^(Title|Film|Movie)$/i)) {
+                            extractedMovies.push({ title, year });
+                        }
+                    }
+                });
+            }
+            
+            // Method 2: Extract from numbered lists with years
+            const listRegex = /^\d+\.\s*(.+?)\s*\((\d{4})\)/gm;
+            let listMatch;
+            while ((listMatch = listRegex.exec(aiResponse)) !== null) {
+                const title = listMatch[1].replace(/\*\*/g, '').trim();
+                const year = listMatch[2];
+                if (title && year) {
+                    extractedMovies.push({ title, year });
+                }
+            }
+            
+            // Method 3: Extract from bullet points with years
+            const bulletRegex = /^[-*]\s*(.+?)\s*\((\d{4})\)/gm;
+            let bulletMatch;
+            while ((bulletMatch = bulletRegex.exec(aiResponse)) !== null) {
+                const title = bulletMatch[1].replace(/\*\*/g, '').trim();
+                const year = bulletMatch[2];
+                if (title && year) {
+                    extractedMovies.push({ title, year });
+                }
+            }
+            
+            // Method 4: Extract movie titles in quotes with years
+            const quotedRegex = /"([^"]+)"\s*\((\d{4})\)/g;
+            let quotedMatch;
+            while ((quotedMatch = quotedRegex.exec(aiResponse)) !== null) {
+                const title = quotedMatch[1].trim();
+                const year = quotedMatch[2];
+                if (title && year) {
+                    extractedMovies.push({ title, year });
+                }
+            }
+            
+            // Remove duplicates
+            const uniqueMovies = [];
+            const seen = new Set();
+            extractedMovies.forEach(movie => {
+                const key = `${movie.title.toLowerCase()}-${movie.year}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueMovies.push(movie);
+                }
+            });
+            extractedMovies = uniqueMovies;
+            
+            console.log(`🎬 Extracted ${extractedMovies.length} movies from AI response:`, extractedMovies);
+            // --- End enhanced movie extraction ---
+
+            displayMessage('ai', aiResponse); // Pass raw response to displayMessage
+
+            // Add "Add to Network" button if movies were extracted
+            if (extractedMovies.length > 0) {
+                const messageBubble = document.getElementById('chatMessages').lastChild.querySelector('.message-bubble');
+                if (messageBubble) {
+                    // Create a container for the extracted movies preview
+                    const moviesContainer = document.createElement('div');
+                    moviesContainer.style.cssText = `
+                        margin-top: 15px;
+                        padding: 12px;
+                        background: rgba(233, 69, 96, 0.1);
+                        border-radius: 8px;
+                        border-left: 4px solid var(--accent-color);
+                    `;
+                    
+                    const moviesTitle = document.createElement('div');
+                    moviesTitle.textContent = `🎬 Found ${extractedMovies.length} movies:`;
+                    moviesTitle.style.cssText = `
+                        font-weight: bold;
+                        color: var(--accent-color);
+                        margin-bottom: 8px;
+                        font-size: 14px;
+                    `;
+                    moviesContainer.appendChild(moviesTitle);
+                    
+                    // Show preview of movies (max 5)
+                    const moviesList = document.createElement('div');
+                    moviesList.style.cssText = `
+                        font-size: 12px;
+                        color: var(--text-secondary);
+                        margin-bottom: 10px;
+                        max-height: 100px;
+                        overflow-y: auto;
+                    `;
+                    
+                    const moviesToShow = extractedMovies.slice(0, 5);
+                    moviesToShow.forEach(movie => {
+                        const movieItem = document.createElement('div');
+                        movieItem.textContent = `• ${movie.title} (${movie.year})`;
+                        movieItem.style.marginBottom = '2px';
+                        moviesList.appendChild(movieItem);
+                    });
+                    
+                    if (extractedMovies.length > 5) {
+                        const moreText = document.createElement('div');
+                        moreText.textContent = `... and ${extractedMovies.length - 5} more`;
+                        moreText.style.fontStyle = 'italic';
+                        moviesList.appendChild(moreText);
+                    }
+                    
+                    moviesContainer.appendChild(moviesList);
+                    
+                    // Add buttons container
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+                    
+                    const addButton = document.createElement('button');
+                    addButton.classList.add('control-btn', 'add-to-network-btn');
+                    addButton.textContent = `➕ Add ${extractedMovies.length} Movies`;
+                    addButton.style.cssText = `
+                        background: var(--accent-color);
+                        color: white;
+                        border: none;
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        flex: 1;
+                    `;
+                    addButton.addEventListener('click', addSuggestedMoviesToNetwork);
+                    
+                    const previewButton = document.createElement('button');
+                    previewButton.classList.add('control-btn');
+                    previewButton.textContent = '👁️ Preview';
+                    previewButton.style.cssText = `
+                        background: var(--glass-bg);
+                        color: var(--text-color);
+                        border: 1px solid var(--glass-border);
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    `;
+                    previewButton.addEventListener('click', () => showMoviePreview(extractedMovies));
+                    
+                    buttonsContainer.appendChild(addButton);
+                    buttonsContainer.appendChild(previewButton);
+                    moviesContainer.appendChild(buttonsContainer);
+                    
+                    messageBubble.appendChild(moviesContainer);
+                }
+            }
+
             chatHistory.push({ role: 'assistant', content: aiResponse });
         } catch (error) {
             console.error('AI Chat Error:', error);
             displayMessage('ai', 'Sorry, I am having trouble connecting to the AI. Please try again later.');
         } finally {
-            ui.showLoading(false); // Hide loading indicator
+            ui.showLoading(false);
         }
+    }
+
+    function showMoviePreview(movies) {
+        let modal = document.getElementById('moviePreviewModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'moviePreviewModal';
+            modal.className = 'modal';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>🎬 Movie Preview</h3>
+                        <button class="close-btn" id="closeMoviePreviewBtn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="moviePreviewContent"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="control-btn" id="addAllMoviesBtn">➕ Add All to Network</button>
+                        <button class="control-btn" id="closeMoviePreviewFooterBtn">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const content = document.getElementById('moviePreviewContent');
+        content.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Preview of ${movies.length} movies extracted from the AI recommendation:
+                </p>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    ${movies.map((movie, index) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--glass-border); ${index % 2 === 0 ? 'background: rgba(255,255,255,0.02);' : ''}">
+                            <div>
+                                <div style="font-weight: bold; color: var(--text-color);">${movie.title}</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Year: ${movie.year}</div>
+                            </div>
+                            <button class="control-btn add-single-movie-btn" data-title="${movie.title}" data-year="${movie.year}" 
+                                    style="background: var(--accent-color); color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px;">
+                                Add
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+
+        // Event listeners
+        document.getElementById('closeMoviePreviewBtn').onclick = () => modal.style.display = 'none';
+        document.getElementById('closeMoviePreviewFooterBtn').onclick = () => modal.style.display = 'none';
+        document.getElementById('addAllMoviesBtn').onclick = () => {
+            modal.style.display = 'none';
+            addSuggestedMoviesToNetwork();
+        };
+
+        // Individual movie add buttons
+        document.querySelectorAll('.add-single-movie-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const title = e.target.dataset.title;
+                const year = e.target.dataset.year;
+                
+                e.target.disabled = true;
+                e.target.textContent = 'Adding...';
+                
+                try {
+                    document.getElementById('movieSearch').value = `${title} ${year}`;
+                    await network.searchAndAddMovie();
+                    e.target.textContent = '✓ Added';
+                    e.target.style.background = 'var(--success-color)';
+                    ui.showNotification(`Added "${title}" to network`, 'success');
+                } catch (error) {
+                    e.target.textContent = '✗ Failed';
+                    e.target.style.background = 'var(--accent-color)';
+                    ui.showNotification(`Failed to add "${title}"`, 'error');
+                }
+            });
+        });
+    }
+
+    async function addSuggestedMoviesToNetwork() {
+        if (extractedMovies.length === 0) {
+            ui.showNotification('No movies to add.', 'warning');
+            return;
+        }
+
+        ui.showLoading(true);
+        ui.showNotification(`Adding ${extractedMovies.length} movies to network...`, 'info');
+
+        let addedCount = 0;
+        for (const movie of extractedMovies) {
+            try {
+                document.getElementById('movieSearch').value = `${movie.title} ${movie.year}`;
+                await network.searchAndAddMovie();
+                addedCount++;
+                // Add a small delay to prevent overwhelming the API/UI
+                await new Promise(resolve => setTimeout(resolve, 800));
+            } catch (error) {
+                console.error(`Failed to add ${movie.title}:`, error);
+            }
+        }
+
+        ui.showNotification(`Successfully added ${addedCount}/${extractedMovies.length} movies to network!`, 'success');
+        ui.showLoading(false);
+        
+        // Update the empty overlay
+        if (window.updateEmptyOverlay) window.updateEmptyOverlay();
     }
 
     setupGlobalEventListeners();

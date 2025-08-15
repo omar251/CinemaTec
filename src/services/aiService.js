@@ -239,10 +239,17 @@ Analysis:`
   }
 
   async getChatCompletion(messages) {
+    logger.debug('getChatCompletion called'); // New log
     if (!this.enabled) {
+      logger.error('AI service not enabled for chat completion.'); // More specific log
       throw new Error('AI service not available');
     }
+    logger.debug(`Provider enabled: ${this.enabled}`); // New log
+    logger.debug(`Provider object: ${!!this.provider}`); // New log
+    logger.debug(`Provider chatCompletion type: ${typeof this.provider.chatCompletion}`); // New log
+
     if (typeof this.provider.chatCompletion !== 'function') {
+      logger.error('Current AI provider does not support chat completions function.'); // More specific log
       throw new Error('Current AI provider does not support chat completions.');
     }
     try {
@@ -251,7 +258,7 @@ Analysis:`
       logger.debug('AI chat completion generated successfully');
       return response;
     } catch (error) {
-      logger.error('AI chat completion failed', { error: error.message });
+      logger.error('AI chat completion failed', { error: error.message, stack: error.stack }); // Added stack
       throw error;
     }
   }

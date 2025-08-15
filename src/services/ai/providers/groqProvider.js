@@ -64,14 +64,18 @@ class GroqProvider extends BaseAIProvider {
       const res = await axios.post(url, data, { headers });
       return res.data.choices?.[0]?.message?.content?.trim() || "";
     } catch (error) {
-      if (
-        error.response?.status === 400 &&
-        error.response?.data?.error?.message?.includes("model")
-      ) {
-        throw new Error(
-          `Invalid Groq model '${this.model}': ${error.response.data.error.message}`,
-        );
+      if (error.response) {
+        // Log the full error response from Groq API
+        this.logger && this.logger.error(`Groq API error (generateText): ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+        if (error.response.status === 400 && error.response.data?.error?.message?.includes("model")) {
+          throw new Error(
+            `Invalid Groq model '${this.model}': ${error.response.data.error.message}`,
+          );
+        }
+        throw new Error(`Groq API request failed (generateText): ${error.response.data?.error?.message || error.message}`);
       }
+      // Log other errors (network, etc.)
+      this.logger && this.logger.error(`Groq request failed (generateText): ${error.message}`);
       throw error;
     }
   }
@@ -101,14 +105,18 @@ class GroqProvider extends BaseAIProvider {
       const res = await axios.post(url, data, { headers });
       return res.data.choices?.[0]?.message?.content?.trim() || "";
     } catch (error) {
-      if (
-        error.response?.status === 400 &&
-        error.response?.data?.error?.message?.includes("model")
-      ) {
-        throw new Error(
-          `Invalid Groq model '${this.model}': ${error.response.data.error.message}`,
-        );
+      if (error.response) {
+        // Log the full error response from Groq API
+        this.logger && this.logger.error(`Groq API error (chatCompletion): ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+        if (error.response.status === 400 && error.response.data?.error?.message?.includes("model")) {
+          throw new Error(
+            `Invalid Groq model '${this.model}': ${error.response.data.error.message}`,
+          );
+        }
+        throw new Error(`Groq API request failed (chatCompletion): ${error.response.data?.error?.message || error.message}`);
       }
+      // Log other errors (network, etc.)
+      this.logger && this.logger.error(`Groq request failed (chatCompletion): ${error.message}`);
       throw error;
     }
   }

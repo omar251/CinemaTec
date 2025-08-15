@@ -1,6 +1,7 @@
 /**
  * AI integration routes (provider-agnostic)
  */
+console.log('ai.js loaded and request received'); // New log
 const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
@@ -225,6 +226,7 @@ router.post('/insights/tts', async (req, res) => {
 // Chat with AI
 router.post('/chat', async (req, res) => {
   try {
+    logger.debug('Received /api/ai/chat request'); // New log
     const { messages } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {

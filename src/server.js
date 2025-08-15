@@ -19,6 +19,7 @@ require('./services/enhancementService');
 class Server {
   constructor() {
     this.app = express();
+    console.log('--- Express app initialized, request received ---'); // New log
     this.port = config.server.port;
     this.host = config.server.host;
     

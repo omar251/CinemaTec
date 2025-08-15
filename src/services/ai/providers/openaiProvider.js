@@ -45,6 +45,21 @@ class OpenAIProvider extends BaseAIProvider {
     });
     return res.choices?.[0]?.message?.content?.trim() || '';
   }
+
+  // Chat completion method for direct message handling
+  async chatCompletion(messages) {
+    if (!this.enabled) {
+      throw new Error('OpenAI provider not enabled');
+    }
+
+    const res = await this.client.chat.completions.create({
+      model: this.model,
+      messages: messages,
+      temperature: 0.7,
+    });
+    
+    return res.choices?.[0]?.message?.content?.trim() || '';
+  }
 }
 
 module.exports = OpenAIProvider;
