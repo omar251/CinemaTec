@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
+const ttsService = require('../services/ttsService');
 const logger = require('../utils/logger');
 
 // Generate AI synopsis for a movie
@@ -186,6 +187,37 @@ router.get('/health', async (req, res) => {
       status: 'error',
       service: 'AI',
       error: error.message
+    });
+  }
+});
+
+// Synthesize AI insights text to speech
+router.post('/insights/tts', async (req, res) => {
+  try {
+    const { insightsText } = req.body;
+
+    if (!insightsText) {
+      return res.status(400).json({ error: 'Insights text is required for TTS' });
+    }
+
+    logger.info(`Synthesizing AI insights text for TTS (length: ${insightsText.length})`);
+
+    const audioBase64 = await ttsService.synthesizeText(insightsText);
+
+    res.json({
+      success: true,
+      audio: audioBase64
+    });
+
+  } catch (error) {
+    logger.error(`AI insights TTS failed: ${error.message}`, {
+      insightsTextLength: req.body.insightsText?.length,
+      errorStack: error.stack
+    });
+
+    res.status(500).json({
+      error: 'Failed to synthesize AI insights for TTS',
+      details: error.message
     });
   }
 });

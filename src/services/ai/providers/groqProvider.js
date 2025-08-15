@@ -2,13 +2,7 @@
  * Groq Provider (chat completions)
  */
 const BaseAIProvider = require('./baseProvider');
-let Groq;
-try {
-  // Try both import styles for compatibility
-  Groq = require('groq-sdk').default || require('groq-sdk');
-} catch (_) {
-  // optional dependency not installed by default
-}
+const axios = require('axios');
 
 class GroqProvider extends BaseAIProvider {
   constructor(config, logger) {
@@ -18,14 +12,14 @@ class GroqProvider extends BaseAIProvider {
     const key = process.env.GROQ_API_KEY || config?.apis?.groq?.key || config?.apis?.ai?.groq?.key || config?.apis?.ai?.key;
     const model = process.env.GROQ_MODEL || config?.apis?.groq?.model || config?.apis?.ai?.groq?.model || config?.apis?.ai?.model || 'llama-3.3-70b-versatile';
 
-    if (!key || !Groq) {
-      logger && logger.warn('Groq provider not available - missing API key or package');
+    if (!key) {
+      logger && logger.warn('Groq provider not available - missing API key');
       this.enabled = false;
       return;
     }
 
     try {
-      this.client = new Groq({ apiKey: key });
+      this.key = key;
       this.model = model;
       this.enabled = true;
       logger && logger.info('🤖 Groq provider initialized');
@@ -37,37 +31,30 @@ class GroqProvider extends BaseAIProvider {
 
   async generateText(prompt) {
     if (!this.enabled) throw new Error('AI provider not available');
-    const res = await this.client.chat.completions.create({
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
+    const headers = {
+      'Authorization': `Bearer ${this.key}`,
+      'Content-Type': 'application/json'
+    };
+    const data = {
       model: this.model,
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
         { role: 'user', content: prompt },
       ],
       temperature: 0.7,
-    });
-    return res.choices?.[0]?.message?.content?.trim() || '';
+    };
+
+    const res = await axios.post(url, data, { headers });
+    return res.data.choices?.[0]?.message?.content?.trim() || '';
   }
 
   async generateTextStream(prompt, onDelta) {
     if (!this.enabled) throw new Error('AI provider not available');
-    const stream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      stream: true
-    });
-    let final = '';
-    for await (const chunk of stream) {
-      const token = chunk.choices?.[0]?.delta?.content || '';
-      if (token) {
-        final += token;
-        if (onDelta) onDelta(token);
-      }
-    }
-    return final.trim();
+    // For simplicity, stream will just return the full text for now
+    const text = await this.generateText(prompt);
+    if (onDelta) onDelta(text);
+    return text;
   }
 }
 

@@ -1090,6 +1090,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div id="aiAnalysisContent" style="line-height: 1.6; color: var(--text-color);"></div>
                     </div>
                     <div class="modal-footer">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="control-btn" id="ai-insights-tts-listen-btn" style="background: var(--accent-color); border: none; color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                                🔊 Listen to Analysis
+                            </button>
+                            <button class="control-btn" id="ai-insights-tts-stop-btn" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                                ⏹️ Stop Audio
+                            </button>
+                        </div>
                         <button class="control-btn" id="closeAiInsightsFooterBtn">Close</button>
                     </div>
                 </div>
@@ -1114,6 +1122,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (closeFooterBtn) {
             closeFooterBtn.addEventListener('click', () => {
                 modal.style.display = 'none';
+            });
+        }
+
+        // Add TTS button event listeners for AI insights
+        const aiInsightsTtsListenBtn = document.getElementById('ai-insights-tts-listen-btn');
+        const aiInsightsTtsStopBtn = document.getElementById('ai-insights-tts-stop-btn');
+
+        if (aiInsightsTtsListenBtn) {
+            aiInsightsTtsListenBtn.addEventListener('click', async () => {
+                const insightsText = document.getElementById('aiAnalysisContent').querySelector('p').textContent;
+                if (window.playAIInsights) {
+                    await window.playAIInsights(insightsText);
+                } else {
+                    ui.showNotification('TTS function not available', 'error');
+                }
+            });
+        }
+
+        if (aiInsightsTtsStopBtn) {
+            aiInsightsTtsStopBtn.addEventListener('click', () => {
+                if (window.stopTTS) {
+                    window.stopTTS();
+                } else {
+                    ui.showNotification('TTS stop function not available', 'error');
+                }
             });
         }
     }
@@ -1316,6 +1349,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.stopTTS = () => {
         tts.stop();
         ui.showNotification('⏹️ Audio stopped', 'info');
+    };
+
+    window.playAIInsights = async (insightsText) => {
+        try {
+            ui.showNotification('🔊 Starting AI insights audio...', 'info');
+            await tts.playAIInsights(insightsText);
+            ui.showNotification('🎵 AI insights audio playback started', 'success');
+        } catch (error) {
+            console.error('AI Insights TTS Error:', error);
+            ui.showNotification(`AI Insights Audio failed: ${error.message}`, 'error');
+        }
     };
 
     // AI Provider Selector Setup

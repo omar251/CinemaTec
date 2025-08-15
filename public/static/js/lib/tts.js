@@ -178,6 +178,48 @@ class TTSManager {
         }
     }
 
+    // Synthesize and play AI insights
+    async playAIInsights(insightsText, voice = null) {
+        if (!this.isAvailable) {
+            throw new Error('TTS service not available');
+        }
+
+        if (!insightsText || insightsText.trim().length === 0) {
+            throw new Error('No AI insights to read');
+        }
+
+        try {
+            // Stop any currently playing audio
+            this.stop();
+
+            const response = await fetch('/api/ai/insights/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    insightsText: insightsText.trim(),
+                    voice: voice || this.defaultVoice
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'AI insights TTS failed');
+            }
+
+            const result = await response.json();
+            
+            // Convert base64 to audio and play
+            await this.playAudioFromBase64(result.audio);
+            
+            return result;
+        } catch (error) {
+            console.error('AI insights TTS failed:', error);
+            throw error;
+        }
+    }
+
     // Convert base64 audio to playable audio and play it
     async playAudioFromBase64(audioBase64) {
         return new Promise((resolve, reject) => {
