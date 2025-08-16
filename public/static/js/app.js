@@ -1237,28 +1237,75 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.className = 'modal';
             modal.style.display = 'none';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
+                <div class="modal-content" style="max-width: 600px; height: 85vh; display: flex; flex-direction: column;">
                     <div class="modal-header">
-                        <h3>💬 AI Chat</h3>
+                        <h3>💬 AI Movie Assistant</h3>
                         <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="control-btn" id="quickSuggestionsBtn" style="background: var(--gemini-accent); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 12px;" title="Quick suggestions">
+                                ✨ Suggestions
+                            </button>
                             <button class="control-btn" id="clearChatBtn" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-color); padding: 6px 10px; border-radius: 6px; font-size: 12px;" title="Clear conversation history">
                                 🗑️ Clear
                             </button>
                             <button class="close-btn" id="closeAiChatBtn">&times;</button>
                         </div>
                     </div>
+                    <div id="quickSuggestionsPanel" style="display: none; padding: 10px; background: var(--glass-bg); border-bottom: 1px solid var(--glass-border);">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Quick suggestions:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            <button class="suggestion-btn" data-suggestion="Recommend movies about overcoming adversity">🏆 Overcoming Adversity</button>
+                            <button class="suggestion-btn" data-suggestion="I want sci-fi movies like Blade Runner">🚀 Sci-Fi Classics</button>
+                            <button class="suggestion-btn" data-suggestion="Show me the best horror movies from the 1980s">👻 80s Horror</button>
+                            <button class="suggestion-btn" data-suggestion="Movies about friendship and coming of age">👫 Coming of Age</button>
+                            <button class="suggestion-btn" data-suggestion="Recommend psychological thrillers with plot twists">🧠 Mind Benders</button>
+                            <button class="suggestion-btn" data-suggestion="I need feel-good movies for a bad day">😊 Feel Good</button>
+                        </div>
+                    </div>
                     <div class="modal-body" style="flex-grow: 1; overflow-y: auto; padding: 15px; background: var(--background-color-dark); border-radius: 8px; margin-bottom: 10px;">
                         <div id="chatMessages" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Chat messages will be appended here -->
                             <div class="chat-message ai-message">
-                                <div class="message-bubble">Hello! How can I help you with movie recommendations today?</div>
+                                <div class="message-bubble">
+                                    Hello! I'm your AI movie assistant. I can help you discover movies, build your network, and provide personalized recommendations. 
+                                    <br><br>
+                                    Try asking me about:
+                                    <br>• Movies similar to ones you love
+                                    <br>• Films by genre, decade, or theme
+                                    <br>• Hidden gems and classics
+                                    <br>• Movies for specific moods
+                                    <br><br>
+                                    What kind of movies are you in the mood for today? 🎬
+                                </div>
+                            </div>
+                        </div>
+                        <div id="typingIndicator" style="display: none; padding: 10px 0;">
+                            <div class="chat-message ai-message">
+                                <div class="message-bubble typing-bubble">
+                                    <div class="typing-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    AI is thinking...
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div id="chatStats" style="padding: 8px 15px; background: var(--glass-bg); border-top: 1px solid var(--glass-border); font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                        <span id="messageCount">Messages: 1</span>
+                        <span id="extractedCount">Movies found: 0</span>
+                    </div>
                     <div class="modal-footer" style="padding-top: 0;">
-                        <div style="display: flex; width: 100%; gap: 10px;">
-                            <input type="text" id="chatInput" placeholder="Type your message..." style="flex-grow: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-color);">
-                            <button class="control-btn" id="sendChatBtn" style="padding: 10px 15px; background: var(--accent-color); color: white; border-radius: 8px; border: none;">Send</button>
+                        <div style="display: flex; width: 100%; gap: 10px; align-items: flex-end;">
+                            <div style="flex-grow: 1; position: relative;">
+                                <textarea id="chatInput" placeholder="Ask me about movies... (Shift+Enter for new line)" 
+                                    style="width: 100%; min-height: 40px; max-height: 120px; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-color); resize: none; font-family: inherit; line-height: 1.4;"
+                                    rows="1"></textarea>
+                                <div id="charCount" style="position: absolute; bottom: 2px; right: 8px; font-size: 10px; color: var(--text-secondary); pointer-events: none;">0/500</div>
+                            </div>
+                            <button class="control-btn" id="sendChatBtn" style="padding: 10px 15px; background: var(--accent-color); color: white; border-radius: 8px; border: none; height: 40px;" disabled>
+                                <span id="sendBtnText">Send</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1275,18 +1322,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearChatConversation();
             });
 
-            // Chat logic
+            // Quick suggestions button
+            document.getElementById('quickSuggestionsBtn').addEventListener('click', () => {
+                const panel = document.getElementById('quickSuggestionsPanel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // Suggestion buttons
+            document.querySelectorAll('.suggestion-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const suggestion = e.target.dataset.suggestion;
+                    document.getElementById('chatInput').value = suggestion;
+                    document.getElementById('quickSuggestionsPanel').style.display = 'none';
+                    updateSendButton();
+                    document.getElementById('chatInput').focus();
+                });
+            });
+
+            // Enhanced chat logic
             const chatInput = document.getElementById('chatInput');
             const sendChatBtn = document.getElementById('sendChatBtn');
             const chatMessagesContainer = document.getElementById('chatMessages');
 
             if (sendChatBtn && chatInput && chatMessagesContainer) {
-                sendChatBtn.addEventListener('click', sendMessage);
-                chatInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        sendMessage();
+                // Auto-resize textarea
+                chatInput.addEventListener('input', (e) => {
+                    updateCharCount();
+                    updateSendButton();
+                    autoResizeTextarea(e.target);
+                });
+
+                // Enhanced key handling
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (chatInput.value.trim() && !sendChatBtn.disabled) {
+                            sendMessage();
+                        }
                     }
                 });
+
+                sendChatBtn.addEventListener('click', sendMessage);
             }
         }
         modal.style.display = 'flex';
@@ -1839,6 +1915,70 @@ Always be helpful and provide detailed explanations for your recommendations.`
         return html;
     }
 
+    function updateCharCount() {
+        const chatInput = document.getElementById('chatInput');
+        const charCount = document.getElementById('charCount');
+        if (chatInput && charCount) {
+            const length = chatInput.value.length;
+            charCount.textContent = `${length}/500`;
+            charCount.style.color = length > 450 ? 'var(--accent-color)' : 'var(--text-secondary)';
+        }
+    }
+
+    function updateSendButton() {
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendChatBtn');
+        if (chatInput && sendBtn) {
+            const hasText = chatInput.value.trim().length > 0;
+            const withinLimit = chatInput.value.length <= 500;
+            sendBtn.disabled = !hasText || !withinLimit;
+            
+            if (!hasText) {
+                sendBtn.querySelector('#sendBtnText').textContent = 'Send';
+            } else if (!withinLimit) {
+                sendBtn.querySelector('#sendBtnText').textContent = 'Too long';
+            } else {
+                sendBtn.querySelector('#sendBtnText').textContent = 'Send';
+            }
+        }
+    }
+
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 120);
+        textarea.style.height = newHeight + 'px';
+    }
+
+    function showTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.style.display = 'block';
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
+    function updateChatStats() {
+        const messageCount = document.getElementById('messageCount');
+        const extractedCount = document.getElementById('extractedCount');
+        
+        if (messageCount) {
+            const userMessages = chatHistory.filter(msg => msg.role === 'user').length;
+            messageCount.textContent = `Messages: ${userMessages}`;
+        }
+        
+        if (extractedCount) {
+            extractedCount.textContent = `Movies found: ${extractedMovies.length}`;
+        }
+    }
+
     function clearChatConversation() {
         // Show confirmation dialog
         if (confirm('Are you sure you want to clear the conversation? This will remove all chat history.')) {
@@ -1867,13 +2007,26 @@ Always be helpful and provide detailed explanations for your recommendations.`
             if (chatMessagesContainer) {
                 chatMessagesContainer.innerHTML = `
                     <div class="chat-message ai-message">
-                        <div class="message-bubble">Hello! How can I help you with movie recommendations today?</div>
+                        <div class="message-bubble">
+                            Hello! I'm your AI movie assistant. I can help you discover movies, build your network, and provide personalized recommendations. 
+                            <br><br>
+                            Try asking me about:
+                            <br>• Movies similar to ones you love
+                            <br>• Films by genre, decade, or theme
+                            <br>• Hidden gems and classics
+                            <br>• Movies for specific moods
+                            <br><br>
+                            What kind of movies are you in the mood for today? 🎬
+                        </div>
                     </div>
                 `;
             }
 
             // Clear any extracted movies
             extractedMovies = [];
+
+            // Update stats
+            updateChatStats();
 
             // Show notification
             ui.showNotification('Conversation cleared', 'info');
@@ -1894,18 +2047,31 @@ Always be helpful and provide detailed explanations for your recommendations.`
 
     async function sendMessage() {
         const userMessage = document.getElementById('chatInput').value.trim();
-        if (userMessage === '') return;
+        if (userMessage === '' || userMessage.length > 500) return;
+
+        // Disable input during processing
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendChatBtn');
+        chatInput.disabled = true;
+        sendBtn.disabled = true;
+        sendBtn.querySelector('#sendBtnText').textContent = 'Sending...';
 
         displayMessage('user', userMessage);
-        document.getElementById('chatInput').value = '';
+        chatInput.value = '';
+        updateCharCount();
+        autoResizeTextarea(chatInput);
 
         chatHistory.push({ role: 'user', content: userMessage });
 
-        ui.showLoading(true);
+        // Show typing indicator
+        showTypingIndicator();
 
         try {
             const response = await api.sendChatMessage(chatHistory);
             const aiResponse = response.response;
+
+            // Hide typing indicator
+            hideTypingIndicator();
 
             // --- Enhanced movie extraction from AI response ---
             extractedMovies = []; // Clear previous extractions
@@ -2072,11 +2238,31 @@ Always be helpful and provide detailed explanations for your recommendations.`
             }
 
             chatHistory.push({ role: 'assistant', content: aiResponse });
+
+            // Update stats
+            updateChatStats();
+
         } catch (error) {
             console.error('AI Chat Error:', error);
-            displayMessage('ai', 'Sorry, I am having trouble connecting to the AI. Please try again later.');
+            hideTypingIndicator();
+            
+            let errorMessage = 'Sorry, I am having trouble connecting to the AI. Please try again later.';
+            if (error.message.includes('quota')) {
+                errorMessage = 'AI quota exceeded. Please try again later or check your API limits.';
+            } else if (error.message.includes('network')) {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            }
+            
+            displayMessage('ai', errorMessage);
         } finally {
-            ui.showLoading(false);
+            // Re-enable input
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendChatBtn');
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.querySelector('#sendBtnText').textContent = 'Send';
+            updateSendButton();
+            chatInput.focus();
         }
     }
 

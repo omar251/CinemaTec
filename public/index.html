@@ -240,6 +240,82 @@
             transform: translateY(-1px);
         }
 
+        /* Suggestion buttons */
+        .suggestion-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            padding: 6px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .suggestion-btn:hover {
+            background: var(--gemini-accent);
+            color: white;
+            border-color: var(--gemini-accent);
+            transform: translateY(-1px);
+        }
+
+        /* Typing indicator */
+        .typing-bubble {
+            background: var(--glass-bg) !important;
+            border: 1px solid var(--glass-border) !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--gemini-accent);
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Enhanced chat input */
+        #chatInput {
+            transition: border-color 0.3s ease;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            border-color: var(--gemini-accent) !important;
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+        }
+
+        #sendChatBtn:disabled {
+            background: var(--glass-bg) !important;
+            color: var(--text-secondary) !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #quickSuggestionsBtn:hover {
+            background: var(--accent-color) !important;
+            transform: translateY(-1px);
+        }
+
         .stats {
             background: rgba(0, 0, 0, 0.3);
             padding: 5px 15px;
