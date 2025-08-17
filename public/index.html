@@ -316,6 +316,291 @@
             transform: translateY(-1px);
         }
 
+        /* Persistent Chat Sidebar Styles */
+        .chat-sidebar {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            width: 350px;
+            height: 500px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .chat-sidebar.minimized {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+        }
+
+        .chat-sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid var(--glass-border);
+            background: linear-gradient(135deg, var(--gemini-accent), var(--accent-color));
+            color: white;
+            min-height: 60px;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+        }
+
+        .chat-sidebar.minimized .chat-sidebar-header {
+            border-bottom: none;
+            border-radius: 30px;
+            padding: 15px;
+            justify-content: center;
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .chat-sidebar.minimized .chat-title {
+            display: none;
+        }
+
+        .chat-toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            position: relative;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .chat-sidebar.minimized .chat-toggle-btn {
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .chat-sidebar.minimized .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .chat-sidebar-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chat-sidebar.minimized .chat-sidebar-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+            max-height: calc(100% - 120px);
+        }
+
+        .chat-messages-container .message-bubble {
+            max-width: 90%;
+            font-size: 13px;
+            padding: 10px 12px;
+        }
+
+        /* Custom scrollbar for chat messages */
+        .chat-messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .chat-messages-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .chat-messages-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .typing-indicator-sidebar {
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            z-index: 2;
+            flex-shrink: 0;
+        }
+
+        .chat-stats-mini {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            margin-bottom: 8px;
+        }
+
+        #sidebarChatInput {
+            flex: 1;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 12px;
+            resize: none;
+            min-height: 32px;
+            max-height: 80px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        #sidebarChatInput:focus {
+            outline: none;
+            border-color: var(--gemini-accent);
+            box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.1);
+        }
+
+        #sidebarSendBtn {
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        #sidebarSendBtn:hover:not(:disabled) {
+            background: var(--gemini-accent);
+            transform: scale(1.1);
+        }
+
+        #sidebarSendBtn:disabled {
+            background: var(--glass-bg);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chat-quick-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .quick-action-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 11px;
+        }
+
+        .quick-action-btn:hover {
+            background: var(--gemini-accent);
+            color: white;
+            border-color: var(--gemini-accent);
+            transform: translateY(-1px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .chat-sidebar {
+                right: 10px;
+                width: 320px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-sidebar {
+                right: 10px;
+                width: 280px;
+                height: 400px;
+            }
+            
+            .chat-sidebar.minimized {
+                width: 50px;
+                height: 50px;
+                border-radius: 25px;
+            }
+        }
+
         .stats {
             background: rgba(0, 0, 0, 0.3);
             padding: 5px 15px;
@@ -1170,6 +1455,53 @@
     </style>
 </head>
 <body>
+    <!-- Persistent Chat Sidebar -->
+    <div id="chatSidebar" class="chat-sidebar minimized">
+        <div class="chat-sidebar-header">
+            <div class="chat-title">
+                <span class="chat-icon">🤖</span>
+                <span class="chat-text">AI Assistant</span>
+            </div>
+            <button id="toggleChatSidebar" class="chat-toggle-btn" title="Minimize chat">
+                <span class="toggle-icon">💬</span>
+            </button>
+        </div>
+        <div class="chat-sidebar-content">
+            <div class="chat-messages-container" id="sidebarChatMessages">
+                <div class="chat-message ai-message">
+                    <div class="message-bubble">
+                        Hi! I'm your AI movie assistant. Ask me about movies and I'll help you discover new films and build your network! 🎬
+                    </div>
+                </div>
+            </div>
+            <div id="sidebarTypingIndicator" class="typing-indicator-sidebar" style="display: none;">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span>AI is thinking...</span>
+            </div>
+            <div class="chat-input-container">
+                <div class="chat-stats-mini">
+                    <span id="sidebarMessageCount">0 msgs</span>
+                    <span id="sidebarMovieCount">0 movies</span>
+                </div>
+                <div class="chat-input-wrapper">
+                    <textarea id="sidebarChatInput" placeholder="Ask about movies..." rows="1"></textarea>
+                    <button id="sidebarSendBtn" disabled>
+                        <span>📤</span>
+                    </button>
+                </div>
+                <div class="chat-quick-actions">
+                    <button class="quick-action-btn" data-action="suggestions" title="Quick suggestions">✨</button>
+                    <button class="quick-action-btn" data-action="clear" title="Clear chat">🗑️</button>
+                    <button class="quick-action-btn" data-action="expand" title="Open full chat">⛶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <h1>🎬 CinemaTec Explorer</h1>
         <div class="search-container">

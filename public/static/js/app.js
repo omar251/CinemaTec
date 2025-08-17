@@ -35,6 +35,100 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSearchDropdownOpen = false;
     let extractedMovies = []; // Initialize extractedMovies here
 
+    // Shared movie extraction function
+    function extractMoviesFromText(text) {
+        const movies = [];
+        
+        console.log('🔍 Extracting movies from text:', text.substring(0, 200) + '...');
+        
+        // Method 1: Extract from markdown tables
+        const tableRegex = /\|\s*#\s*\|\s*(?:Title|Film)\s*\|\s*Year\s*\|[\s\S]*?\n\|[-\s|]*\|\s*\n([\s\S]*?)(?=\n\n|\n---|\n\|(?!\s*\d)|\n[A-Z]|\n\*|$)/i;
+        const tableMatch = text.match(tableRegex);
+        
+        if (tableMatch && tableMatch[1]) {
+            console.log('📊 Found table match');
+            const tableRows = tableMatch[1].trim().split('\n');
+            tableRows.forEach(row => {
+                const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
+                if (cells.length >= 3) {
+                    const title = cells[1].replace(/\*\*/g, '').trim();
+                    const yearMatch = cells[2].match(/(\d{4})/);
+                    const year = yearMatch ? yearMatch[1] : null;
+                    if (title && year && !title.match(/^(Title|Film|Movie)$/i)) {
+                        movies.push({ title, year });
+                        console.log('📽️ Table movie:', title, year);
+                    }
+                }
+            });
+        }
+        
+        // Method 2: Extract from numbered lists with years
+        const listRegex = /^\d+\.\s*(.+?)\s*\((\d{4})\)/gm;
+        let listMatch;
+        while ((listMatch = listRegex.exec(text)) !== null) {
+            const title = listMatch[1].replace(/\*\*/g, '').trim();
+            const year = listMatch[2];
+            if (title && year) {
+                movies.push({ title, year });
+                console.log('📝 List movie:', title, year);
+            }
+        }
+        
+        // Method 3: Extract from bullet points with years
+        const bulletRegex = /^[-*]\s*(.+?)\s*\((\d{4})\)/gm;
+        let bulletMatch;
+        while ((bulletMatch = bulletRegex.exec(text)) !== null) {
+            const title = bulletMatch[1].replace(/\*\*/g, '').trim();
+            const year = bulletMatch[2];
+            if (title && year) {
+                movies.push({ title, year });
+                console.log('🔸 Bullet movie:', title, year);
+            }
+        }
+        
+        // Method 4: Extract movie titles in quotes with years
+        const quotedRegex = /"([^"]+)"\s*\((\d{4})\)/g;
+        let quotedMatch;
+        while ((quotedMatch = quotedRegex.exec(text)) !== null) {
+            const title = quotedMatch[1].trim();
+            const year = quotedMatch[2];
+            if (title && year) {
+                movies.push({ title, year });
+                console.log('💬 Quoted movie:', title, year);
+            }
+        }
+        
+        // Method 5: Extract from simple "Title (Year)" patterns
+        const simpleRegex = /([A-Z][^(\n]*?)\s*\((\d{4})\)/g;
+        let simpleMatch;
+        while ((simpleMatch = simpleRegex.exec(text)) !== null) {
+            const title = simpleMatch[1].replace(/\*\*/g, '').trim();
+            const year = simpleMatch[2];
+            
+            // Filter out common false positives
+            if (title && year && 
+                !title.match(/^(Title|Film|Movie|Year|The|A|An|In|On|At|By|For|With|From|To)$/i) &&
+                title.length > 2 && title.length < 100) {
+                movies.push({ title, year });
+                console.log('🎬 Simple movie:', title, year);
+            }
+        }
+        
+        // Remove duplicates
+        const uniqueMovies = [];
+        const seen = new Set();
+        movies.forEach(movie => {
+            const key = `${movie.title.toLowerCase()}-${movie.year}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueMovies.push(movie);
+            }
+        });
+        
+        console.log(`🎯 Extracted ${uniqueMovies.length} unique movies:`, uniqueMovies);
+        return uniqueMovies;
+    }
+
     function setupGlobalEventListeners() {
         // Enhanced search with debouncing and autocomplete
         const searchInput = document.getElementById('movieSearch');
@@ -324,18 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
             aiBtn.addEventListener('click', () => generateNetworkInsights());
         }
 
-        // Add AI Chat button
-        const aiChatBtn = document.createElement('button');
-        aiChatBtn.id = 'aiChatBtn';
-        aiChatBtn.className = 'control-btn';
-        aiChatBtn.innerHTML = '💬 AI Chat';
-        aiChatBtn.title = 'Chat with AI for recommendations';
-        aiChatBtn.addEventListener('click', showChatModal);
-        // Insert near aiBtn
-        const controls = document.querySelector('.controls');
-        if (controls) {
-            controls.appendChild(aiChatBtn);
-        }
+        // Initialize persistent chat sidebar
+        initializePersistentChat();
 
         document.getElementById('closeSaveBtn').addEventListener('click', closeSaveDialog);
         document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveDialog);
@@ -1837,7 +1921,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Global chat history
+    // Global chat history (shared between modal and sidebar)
     let chatHistory = [{ 
         role: 'system', 
         content: `You are a movie recommendation expert. When providing movie recommendations:
@@ -1856,6 +1940,250 @@ Example formats:
 
 Always be helpful and provide detailed explanations for your recommendations.` 
     }];
+
+    // Persistent Chat Sidebar Functions
+    function initializePersistentChat() {
+        const toggleBtn = document.getElementById('toggleChatSidebar');
+        const sidebar = document.getElementById('chatSidebar');
+        const sidebarInput = document.getElementById('sidebarChatInput');
+        const sidebarSendBtn = document.getElementById('sidebarSendBtn');
+
+        // Toggle sidebar
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('minimized');
+            
+            // Update tooltip text
+            if (sidebar.classList.contains('minimized')) {
+                toggleBtn.title = 'Expand chat';
+            } else {
+                toggleBtn.title = 'Minimize chat';
+                setTimeout(() => sidebarInput.focus(), 300);
+            }
+        });
+
+        // Input handling
+        sidebarInput.addEventListener('input', () => {
+            updateSidebarSendButton();
+            autoResizeSidebarTextarea();
+        });
+
+        sidebarInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (sidebarInput.value.trim() && !sidebarSendBtn.disabled) {
+                    sendSidebarMessage();
+                }
+            }
+        });
+
+        sidebarSendBtn.addEventListener('click', sendSidebarMessage);
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+                handleQuickAction(action);
+            });
+        });
+
+        // Update initial stats
+        updateSidebarStats();
+    }
+
+    function updateSidebarSendButton() {
+        const input = document.getElementById('sidebarChatInput');
+        const btn = document.getElementById('sidebarSendBtn');
+        if (input && btn) {
+            const hasText = input.value.trim().length > 0;
+            btn.disabled = !hasText;
+        }
+    }
+
+    function autoResizeSidebarTextarea() {
+        const textarea = document.getElementById('sidebarChatInput');
+        if (textarea) {
+            textarea.style.height = 'auto';
+            const newHeight = Math.min(textarea.scrollHeight, 80);
+            textarea.style.height = newHeight + 'px';
+        }
+    }
+
+    function updateSidebarStats() {
+        const messageCount = document.getElementById('sidebarMessageCount');
+        const movieCount = document.getElementById('sidebarMovieCount');
+        
+        if (messageCount) {
+            const userMessages = chatHistory.filter(msg => msg.role === 'user').length;
+            messageCount.textContent = `${userMessages} msgs`;
+        }
+        
+        if (movieCount) {
+            movieCount.textContent = `${extractedMovies.length} movies`;
+        }
+    }
+
+    function displaySidebarMessage(role, content) {
+        const container = document.getElementById('sidebarChatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message', `${role}-message`);
+        
+        if (role === 'ai') {
+            messageElement.innerHTML = `<div class="message-bubble">${formatMarkdownToHtml(content)}</div>`;
+        } else {
+            messageElement.innerHTML = `<div class="message-bubble">${content}</div>`;
+        }
+        
+        container.appendChild(messageElement);
+        container.scrollTop = container.scrollHeight;
+
+        // Add movie extraction and buttons for AI messages
+        if (role === 'ai' && extractedMovies.length > 0) {
+            addMovieButtonsToSidebarMessage(messageElement);
+        }
+    }
+
+    function addMovieButtonsToSidebarMessage(messageElement) {
+        const messageBubble = messageElement.querySelector('.message-bubble');
+        if (messageBubble && extractedMovies.length > 0) {
+            const moviesContainer = document.createElement('div');
+            moviesContainer.style.cssText = `
+                margin-top: 10px;
+                padding: 8px;
+                background: rgba(233, 69, 96, 0.1);
+                border-radius: 6px;
+                border-left: 3px solid var(--accent-color);
+            `;
+            
+            const moviesTitle = document.createElement('div');
+            moviesTitle.textContent = `🎬 Found ${extractedMovies.length} movies`;
+            moviesTitle.style.cssText = `
+                font-weight: bold;
+                color: var(--accent-color);
+                margin-bottom: 6px;
+                font-size: 11px;
+            `;
+            moviesContainer.appendChild(moviesTitle);
+            
+            const addButton = document.createElement('button');
+            addButton.textContent = `➕ Add ${extractedMovies.length} to Network`;
+            addButton.style.cssText = `
+                background: var(--accent-color);
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 10px;
+                width: 100%;
+            `;
+            addButton.addEventListener('click', addSuggestedMoviesToNetwork);
+            moviesContainer.appendChild(addButton);
+            
+            messageBubble.appendChild(moviesContainer);
+        }
+    }
+
+    function showSidebarTypingIndicator() {
+        const indicator = document.getElementById('sidebarTypingIndicator');
+        if (indicator) {
+            indicator.style.display = 'flex';
+            const container = document.getElementById('sidebarChatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function hideSidebarTypingIndicator() {
+        const indicator = document.getElementById('sidebarTypingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
+    async function sendSidebarMessage() {
+        const input = document.getElementById('sidebarChatInput');
+        const userMessage = input.value.trim();
+        if (!userMessage) return;
+
+        // Disable input
+        input.disabled = true;
+        document.getElementById('sidebarSendBtn').disabled = true;
+
+        displaySidebarMessage('user', userMessage);
+        input.value = '';
+        autoResizeSidebarTextarea();
+
+        chatHistory.push({ role: 'user', content: userMessage });
+        showSidebarTypingIndicator();
+
+        try {
+            const response = await api.sendChatMessage(chatHistory);
+            const aiResponse = response.response;
+
+            hideSidebarTypingIndicator();
+
+            // Extract movies using shared function
+            extractedMovies = extractMoviesFromText(aiResponse);
+
+            displaySidebarMessage('ai', aiResponse);
+            chatHistory.push({ role: 'assistant', content: aiResponse });
+            updateSidebarStats();
+
+        } catch (error) {
+            hideSidebarTypingIndicator();
+            displaySidebarMessage('ai', 'Sorry, I encountered an error. Please try again.');
+            console.error('Sidebar chat error:', error);
+        } finally {
+            // Re-enable input
+            input.disabled = false;
+            updateSidebarSendButton();
+            input.focus();
+        }
+    }
+
+    function handleQuickAction(action) {
+        switch (action) {
+            case 'suggestions':
+                showQuickSuggestions();
+                break;
+            case 'clear':
+                clearSidebarChat();
+                break;
+            case 'expand':
+                showChatModal();
+                break;
+        }
+    }
+
+    function showQuickSuggestions() {
+        const suggestions = [
+            "Recommend movies about overcoming adversity",
+            "I want sci-fi movies like Blade Runner", 
+            "Show me the best horror movies from the 1980s",
+            "Movies about friendship and coming of age",
+            "Recommend psychological thrillers with plot twists",
+            "I need feel-good movies for a bad day"
+        ];
+        
+        const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+        document.getElementById('sidebarChatInput').value = randomSuggestion;
+        updateSidebarSendButton();
+    }
+
+    function clearSidebarChat() {
+        if (confirm('Clear chat history?')) {
+            chatHistory = [chatHistory[0]]; // Keep system message
+            document.getElementById('sidebarChatMessages').innerHTML = `
+                <div class="chat-message ai-message">
+                    <div class="message-bubble">
+                        Hi! I'm your AI movie assistant. Ask me about movies and I'll help you discover new films and build your network! 🎬
+                    </div>
+                </div>
+            `;
+            extractedMovies = [];
+            updateSidebarStats();
+            ui.showNotification('Chat cleared', 'info');
+        }
+    }
 
     // Chat logic
     const chatInput = document.getElementById('chatInput');
@@ -2074,73 +2402,7 @@ Always be helpful and provide detailed explanations for your recommendations.`
             hideTypingIndicator();
 
             // --- Enhanced movie extraction from AI response ---
-            extractedMovies = []; // Clear previous extractions
-            
-            // Method 1: Extract from markdown tables
-            const tableRegex = /\|\s*#\s*\|\s*(?:Title|Film)\s*\|\s*Year\s*\|[\s\S]*?\n\|[-\s|]*\|\s*\n([\s\S]*?)(?=\n\n|\n---|\n\|(?!\s*\d)|\n[A-Z]|\n\*|$)/i;
-            const tableMatch = aiResponse.match(tableRegex);
-            
-            if (tableMatch && tableMatch[1]) {
-                const tableRows = tableMatch[1].trim().split('\n');
-                tableRows.forEach(row => {
-                    const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
-                    if (cells.length >= 3) {
-                        const title = cells[1].replace(/\*\*/g, '').trim(); // Remove markdown bold
-                        const yearMatch = cells[2].match(/(\d{4})/);
-                        const year = yearMatch ? yearMatch[1] : null;
-                        if (title && year && !title.match(/^(Title|Film|Movie)$/i)) {
-                            extractedMovies.push({ title, year });
-                        }
-                    }
-                });
-            }
-            
-            // Method 2: Extract from numbered lists with years
-            const listRegex = /^\d+\.\s*(.+?)\s*\((\d{4})\)/gm;
-            let listMatch;
-            while ((listMatch = listRegex.exec(aiResponse)) !== null) {
-                const title = listMatch[1].replace(/\*\*/g, '').trim();
-                const year = listMatch[2];
-                if (title && year) {
-                    extractedMovies.push({ title, year });
-                }
-            }
-            
-            // Method 3: Extract from bullet points with years
-            const bulletRegex = /^[-*]\s*(.+?)\s*\((\d{4})\)/gm;
-            let bulletMatch;
-            while ((bulletMatch = bulletRegex.exec(aiResponse)) !== null) {
-                const title = bulletMatch[1].replace(/\*\*/g, '').trim();
-                const year = bulletMatch[2];
-                if (title && year) {
-                    extractedMovies.push({ title, year });
-                }
-            }
-            
-            // Method 4: Extract movie titles in quotes with years
-            const quotedRegex = /"([^"]+)"\s*\((\d{4})\)/g;
-            let quotedMatch;
-            while ((quotedMatch = quotedRegex.exec(aiResponse)) !== null) {
-                const title = quotedMatch[1].trim();
-                const year = quotedMatch[2];
-                if (title && year) {
-                    extractedMovies.push({ title, year });
-                }
-            }
-            
-            // Remove duplicates
-            const uniqueMovies = [];
-            const seen = new Set();
-            extractedMovies.forEach(movie => {
-                const key = `${movie.title.toLowerCase()}-${movie.year}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    uniqueMovies.push(movie);
-                }
-            });
-            extractedMovies = uniqueMovies;
-            
-            console.log(`🎬 Extracted ${extractedMovies.length} movies from AI response:`, extractedMovies);
+            extractedMovies = extractMoviesFromText(aiResponse);
             // --- End enhanced movie extraction ---
 
             displayMessage('ai', aiResponse); // Pass raw response to displayMessage
