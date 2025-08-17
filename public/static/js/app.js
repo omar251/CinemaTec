@@ -1802,10 +1802,62 @@ Always be helpful and provide detailed explanations for your recommendations.`
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', `${role}-message`);
         
+        const messageBubble = document.createElement('div');
+        messageBubble.classList.add('message-bubble');
+
         if (role === 'ai') {
-            messageElement.innerHTML = `<div class="message-bubble">${formatMarkdownToHtml(content)}</div>`;
+            messageBubble.innerHTML = formatMarkdownToHtml(content);
+            messageElement.appendChild(messageBubble);
+
+            // Add TTS buttons for AI messages in sidebar
+            const ttsButtonsContainer = document.createElement('div');
+            ttsButtonsContainer.style.cssText = `
+                margin-top: 8px; display: flex; gap: 6px; align-items: center;
+                padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;
+                border: 1px solid var(--glass-border);
+            `;
+
+            const listenBtn = document.createElement('button');
+            listenBtn.textContent = '🔊 Listen';
+            listenBtn.classList.add('control-btn');
+            listenBtn.style.cssText = `
+                background: var(--accent-color); color: white; border: none;
+                padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            `;
+            listenBtn.addEventListener('click', async () => {
+                listenBtn.disabled = true;
+                listenBtn.textContent = '🔊 Loading...';
+                try {
+                    await window.playAIInsights(messageBubble.textContent || messageBubble.innerText);
+                    ui.showNotification('🎵 Audio playback started', 'success');
+                } catch (error) {
+                    console.error('TTS Error:', error);
+                    ui.showNotification(`Audio failed: ${error.message}`, 'error');
+                } finally {
+                    listenBtn.disabled = false;
+                    listenBtn.textContent = '🔊 Listen';
+                }
+            });
+
+            const stopBtn = document.createElement('button');
+            stopBtn.textContent = '⏹️ Stop';
+            stopBtn.classList.add('control-btn');
+            stopBtn.style.cssText = `
+                background: var(--glass-bg); border: 1px solid var(--glass-border);
+                color: var(--text-color); padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            `;
+            stopBtn.addEventListener('click', () => {
+                window.stopTTS();
+                ui.showNotification('⏹️ Audio stopped', 'info');
+            });
+
+            ttsButtonsContainer.appendChild(listenBtn);
+            ttsButtonsContainer.appendChild(stopBtn);
+            messageElement.appendChild(ttsButtonsContainer);
+
         } else {
-            messageElement.innerHTML = `<div class="message-bubble">${content}</div>`;
+            messageBubble.innerHTML = content;
+            messageElement.appendChild(messageBubble);
         }
         
         container.appendChild(messageElement);
@@ -2188,13 +2240,65 @@ Always be helpful and provide detailed explanations for your recommendations.`
     function displayMessage(role, content) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', `${role}-message`);
+        const messageBubble = document.createElement('div');
+        messageBubble.classList.add('message-bubble');
+
         if (role === 'ai') {
-            messageElement.innerHTML = `<div class="message-bubble">${formatMarkdownToHtml(content)}</div>`;
+            messageBubble.innerHTML = formatMarkdownToHtml(content);
+            messageElement.appendChild(messageBubble);
+
+            // Add TTS buttons for AI messages
+            const ttsButtonsContainer = document.createElement('div');
+            ttsButtonsContainer.style.cssText = `
+                display: flex; gap: 8px; align-items: center; margin-top: 10px;
+                padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;
+                border: 1px solid var(--glass-border);
+            `;
+
+            const listenBtn = document.createElement('button');
+            listenBtn.textContent = '🔊 Listen';
+            listenBtn.classList.add('control-btn');
+            listenBtn.style.cssText = `
+                background: var(--accent-color); color: white; border: none;
+                padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+            `;
+            listenBtn.addEventListener('click', async () => {
+                listenBtn.disabled = true;
+                listenBtn.textContent = '🔊 Loading...';
+                try {
+                    await window.playAIInsights(messageBubble.textContent || messageBubble.innerText);
+                    ui.showNotification('🎵 Audio playback started', 'success');
+                } catch (error) {
+                    console.error('TTS Error:', error);
+                    ui.showNotification(`Audio failed: ${error.message}`, 'error');
+                } finally {
+                    listenBtn.disabled = false;
+                    listenBtn.textContent = '🔊 Listen';
+                }
+            });
+
+            const stopBtn = document.createElement('button');
+            stopBtn.textContent = '⏹️ Stop';
+            stopBtn.classList.add('control-btn');
+            stopBtn.style.cssText = `
+                background: var(--glass-bg); border: 1px solid var(--glass-border);
+                color: var(--text-color); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+            `;
+            stopBtn.addEventListener('click', () => {
+                window.stopTTS();
+                ui.showNotification('⏹️ Audio stopped', 'info');
+            });
+
+            ttsButtonsContainer.appendChild(listenBtn);
+            ttsButtonsContainer.appendChild(stopBtn);
+            messageElement.appendChild(ttsButtonsContainer);
+
         } else {
-            messageElement.innerHTML = `<div class="message-bubble">${content}</div>`; // For user messages, just display as is
+            messageBubble.innerHTML = content; // For user messages, just display as is
+            messageElement.appendChild(messageBubble);
         }
-        document.getElementById('chatMessages').appendChild(messageElement); // Changed
-        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight; // Changed
+        document.getElementById('chatMessages').appendChild(messageElement);
+        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
     }
 
     async function sendMessage() {
