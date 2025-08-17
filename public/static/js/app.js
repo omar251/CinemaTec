@@ -412,11 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Add AI insights button if it exists
-        const aiBtn = document.getElementById('aiBtn');
-        if (aiBtn) {
-            aiBtn.addEventListener('click', () => generateNetworkInsights());
-        }
+        
 
         // Initialize persistent chat sidebar
         initializePersistentChat();
@@ -1170,148 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showAIInsightsModal(analysis, streaming = false) {
-        // Create AI insights modal if it doesn't exist
-        let modal = document.getElementById('aiInsightsModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'aiInsightsModal';
-            modal.className = 'modal';
-            modal.style.display = 'none';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>🤖 AI Network Analysis</h3>
-                        <button class="close-btn" id="closeAiInsightsBtn">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="aiAnalysisContent" style="line-height: 1.6; color: var(--text-color);"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <button class="control-btn" id="ai-insights-tts-listen-btn" style="background: var(--accent-color); border: none; color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                                🔊 Listen to Analysis
-                            </button>
-                            <button class="control-btn" id="ai-insights-tts-stop-btn" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;">
-                                ⏹️ Stop Audio
-                            </button>
-                        </div>
-                        <button class="control-btn" id="closeAiInsightsFooterBtn">Close</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
-
-        updateAIInsightsContent(analysis, !streaming).catch(console.error);
-        
-        modal.style.display = 'flex';
-        
-        // Add event listeners for close buttons
-        const closeBtn = document.getElementById('closeAiInsightsBtn');
-        const closeFooterBtn = document.getElementById('closeAiInsightsFooterBtn');
-        
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-        }
-        
-        if (closeFooterBtn) {
-            closeFooterBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-        }
-
-        // Add TTS button event listeners for AI insights (remove existing first to prevent duplicates)
-        const aiInsightsTtsListenBtn = document.getElementById('ai-insights-tts-listen-btn');
-        const aiInsightsTtsStopBtn = document.getElementById('ai-insights-tts-stop-btn');
-
-        if (aiInsightsTtsListenBtn) {
-            // Remove any existing event listeners by cloning the element
-            const newListenBtn = aiInsightsTtsListenBtn.cloneNode(true);
-            aiInsightsTtsListenBtn.parentNode.replaceChild(newListenBtn, aiInsightsTtsListenBtn);
-            
-            newListenBtn.addEventListener('click', async () => {
-                try {
-                    // Better text extraction - get all text content from the analysis
-                    const analysisContainer = document.getElementById('aiAnalysisContent');
-                    if (!analysisContainer) {
-                        ui.showNotification('No AI analysis content found', 'error');
-                        return;
-                    }
-                    
-                    // Extract text from the analysis paragraph, handling multiple possible structures
-                    let insightsText = '';
-                    const paragraph = analysisContainer.querySelector('p');
-                    if (paragraph) {
-                        insightsText = paragraph.textContent || paragraph.innerText || '';
-                    } else {
-                        // Fallback: get all text content
-                        insightsText = analysisContainer.textContent || analysisContainer.innerText || '';
-                    }
-                    
-                    // Clean up the text
-                    insightsText = insightsText.trim();
-                    
-                    // Remove any "No analysis generated" or loading messages
-                    if (insightsText.includes('No analysis generated') || 
-                        insightsText.includes('Generating analysis') || 
-                        insightsText.includes('Loading') ||
-                        insightsText.length < 10) {
-                        ui.showNotification('No AI analysis available to read', 'warning');
-                        return;
-                    }
-                    
-                    // Show loading state
-                    ui.showNotification('🔊 Starting AI insights audio...', 'info');
-                    newListenBtn.disabled = true;
-                    newListenBtn.textContent = '🔊 Loading...';
-                    
-                    if (window.playAIInsights) {
-                        await window.playAIInsights(insightsText);
-                        ui.showNotification('🎵 AI insights audio playback started', 'success');
-                    } else {
-                        ui.showNotification('TTS function not available', 'error');
-                    }
-                } catch (error) {
-                    console.error('AI Insights TTS Error:', error);
-                    ui.showNotification(`TTS Error: ${error.message}`, 'error');
-                } finally {
-                    // Reset button state
-                    newListenBtn.disabled = false;
-                    newListenBtn.textContent = '🔊 Listen';
-                }
-            });
-        }
-
-        if (aiInsightsTtsStopBtn) {
-            // Remove any existing event listeners by cloning the element
-            const newStopBtn = aiInsightsTtsStopBtn.cloneNode(true);
-            aiInsightsTtsStopBtn.parentNode.replaceChild(newStopBtn, aiInsightsTtsStopBtn);
-            
-            newStopBtn.addEventListener('click', () => {
-                try {
-                    if (window.stopTTS) {
-                        window.stopTTS();
-                        ui.showNotification('⏹️ Audio stopped', 'info');
-                        
-                        // Reset listen button state if it exists
-                        const currentListenBtn = document.getElementById('ai-insights-tts-listen-btn');
-                        if (currentListenBtn) {
-                            currentListenBtn.disabled = false;
-                            currentListenBtn.textContent = '🔊 Listen';
-                        }
-                    } else {
-                        ui.showNotification('TTS stop function not available', 'error');
-                    }
-                } catch (error) {
-                    console.error('TTS Stop Error:', error);
-                    ui.showNotification('Error stopping audio', 'error');
-                }
-            });
-        }
-    }
+    
 
     function showChatModal() {
         let modal = document.getElementById('aiChatModal');
@@ -1337,6 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="quickSuggestionsPanel" style="display: none; padding: 10px; background: var(--glass-bg); border-bottom: 1px solid var(--glass-border);">
                         <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Quick suggestions:</div>
                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            <button class="suggestion-btn" data-suggestion="Analyze my current network">📊 Analyze Network</button>
                             <button class="suggestion-btn" data-suggestion="Recommend movies about overcoming adversity">🏆 Overcoming Adversity</button>
                             <button class="suggestion-btn" data-suggestion="I want sci-fi movies like Blade Runner">🚀 Sci-Fi Classics</button>
                             <button class="suggestion-btn" data-suggestion="Show me the best horror movies from the 1980s">👻 80s Horror</button>
@@ -1596,37 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function updateAIInsightsContent(text, isDone = true) {
-        const content = document.getElementById('aiAnalysisContent');
-        if (!content) return;
-        
-        const streamingIndicator = isDone ? '' : '<span style="color: var(--gemini-accent); animation: pulse 1.5s infinite;">●</span>';
-        
-        // Get current provider info
-        let providerText = 'AI Provider';
-        try {
-            const response = await api.getAIProviders();
-            if (response.currentProvider && response.currentProvider.enabled) {
-                providerText = response.currentProvider.displayName;
-            }
-        } catch (error) {
-            console.log('Could not get provider info:', error);
-        }
-        
-        content.innerHTML = `
-            <div style="background: var(--glass-bg); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gemini-accent);">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">🤖</span>
-                    <strong style="color: var(--gemini-accent);">AI Analysis</strong>
-                    ${streamingIndicator}
-                </div>
-                <p style="margin: 0; white-space: pre-wrap;">${text || (isDone ? 'No analysis generated.' : 'Generating analysis...')}</p>
-            </div>
-            <div style="margin-top: 15px; font-size: 12px; color: var(--text-secondary); text-align: center;">
-                Powered by ${providerText}
-            </div>
-        `;
-    }
+    
 
     // AI Provider selector
     async function addAIProviderSelector() {
@@ -1726,58 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addAIButton(isHealthy = true, reason = '') {
-        const controls = document.querySelector('.controls');
-        if (controls && !document.getElementById('aiBtn')) {
-            console.log('🔧 Adding AI button to controls');
-            const aiBtn = document.createElement('button');
-            aiBtn.id = 'aiBtn';
-            aiBtn.className = 'control-btn';
-            aiBtn.innerHTML = '🤖 AI Insights';
-            
-            if (isHealthy) {
-                // AI is working - normal button
-                aiBtn.title = 'Generate AI analysis of your network (streaming)';
-                aiBtn.addEventListener('click', () => generateNetworkInsights(true)); // enable streaming
-            } else {
-                // AI not working - grayed out button
-                aiBtn.style.opacity = '0.5';
-                aiBtn.style.cursor = 'not-allowed';
-                aiBtn.style.filter = 'grayscale(1)';
-                
-                // Set helpful tooltip based on reason
-                let tooltip = 'AI features unavailable';
-                if (reason.includes('quota') || reason.includes('429')) {
-                    tooltip = 'AI quota exceeded - Try again tomorrow or upgrade plan';
-                } else if (reason.includes('API key') || reason.includes('key not configured')) {
-                    tooltip = 'AI requires Gemini API key configuration';
-                } else {
-                    tooltip = `AI unavailable: ${reason}`;
-                }
-                aiBtn.title = tooltip;
-                
-                // Show helpful message when clicked
-                aiBtn.addEventListener('click', () => {
-                    if (reason.includes('quota') || reason.includes('429')) {
-                        ui.showNotification('AI quota exceeded. You have reached the daily limit. Try again tomorrow!', 'warning');
-                    } else if (reason.includes('API key') || reason.includes('key not configured')) {
-                        ui.showNotification('AI requires Gemini API key. Check server configuration.', 'error');
-                    } else {
-                        ui.showNotification(`AI features unavailable: ${reason}`, 'error');
-                    }
-                });
-            }
-            
-            // Insert before the color mode select to maintain order
-            // Just append the AI button to controls since color mode is now in sidebar
-            controls.appendChild(aiBtn);
-            console.log('✅ AI button appended to controls');
-        } else if (!controls) {
-            console.log('❌ Controls container not found');
-        } else {
-            console.log('ℹ️ AI button already exists');
-        }
-    }
+    
 
     // Global TTS functions for onclick handlers
     window.playMovieOverview = async (title, overview) => {
@@ -2116,16 +1891,64 @@ Always be helpful and provide detailed explanations for your recommendations.`
         showSidebarTypingIndicator();
 
         try {
-            const response = await api.sendChatMessage(chatHistory);
-            const aiResponse = response.response;
+            let aiResponse;
+            const networkAnalysisKeywords = ['analyze network', 'network insights', 'tell me about my network', 'what about my network', 'summarize my network'];
+            const isNetworkAnalysisQuery = networkAnalysisKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+
+            if (isNetworkAnalysisQuery && network.nodes.length > 0) {
+                // Perform network analysis
+                const networkData = {
+                    nodes: network.nodes,
+                    links: network.links
+                };
+                
+                let accumulatedText = '';
+                displaySidebarMessage('ai', 'Generating network analysis...'); // Initial message
+                
+                await api.streamNetworkAnalysis(
+                    networkData,
+                    (token) => {
+                        accumulatedText += token;
+                        // Update the last AI message with streamed content
+                        const lastAiMessage = document.getElementById('sidebarChatMessages').lastChild.querySelector('.message-bubble');
+                        if (lastAiMessage) {
+                            lastAiMessage.innerHTML = formatMarkdownToHtml(accumulatedText);
+                            document.getElementById('sidebarChatMessages').scrollTop = document.getElementById('sidebarChatMessages').scrollHeight;
+                        }
+                    },
+                    (finalText) => {
+                        aiResponse = finalText || accumulatedText;
+                        ui.showNotification('AI network analysis complete!', 'success');
+                    },
+                    (error) => {
+                        aiResponse = 'Streaming failed: ' + error.message;
+                        ui.showNotification('AI streaming failed: ' + error.message, 'error');
+                    }
+                );
+
+            } else if (isNetworkAnalysisQuery && network.nodes.length === 0) {
+                aiResponse = "I can't analyze the network because it's empty. Please add some movies first!";
+            } else {
+                // Regular chat message
+                const response = await api.sendChatMessage(chatHistory);
+                aiResponse = response.response;
+            }
 
             hideSidebarTypingIndicator();
 
             // Extract movies using shared function
             extractedMovies = extractMoviesFromText(aiResponse);
 
-            displaySidebarMessage('ai', aiResponse);
-            chatHistory.push({ role: 'assistant', content: aiResponse });
+            // If it was a streaming response, the message is already displayed and updated.
+            // Otherwise, display the full response.
+            if (!isNetworkAnalysisQuery) {
+                displaySidebarMessage('ai', aiResponse);
+            }
+            
+            // Only push to chatHistory if it was a regular chat message or the final streamed response
+            if (!isNetworkAnalysisQuery || (isNetworkAnalysisQuery && aiResponse)) {
+                chatHistory.push({ role: 'assistant', content: aiResponse });
+            }
             updateSidebarStats();
 
         } catch (error) {
@@ -2156,6 +1979,7 @@ Always be helpful and provide detailed explanations for your recommendations.`
 
     function showQuickSuggestions() {
         const suggestions = [
+            "Analyze my current network",
             "Recommend movies about overcoming adversity",
             "I want sci-fi movies like Blade Runner", 
             "Show me the best horror movies from the 1980s",
@@ -2395,8 +2219,48 @@ Always be helpful and provide detailed explanations for your recommendations.`
         showTypingIndicator();
 
         try {
-            const response = await api.sendChatMessage(chatHistory);
-            const aiResponse = response.response;
+            let aiResponse;
+            const networkAnalysisKeywords = ['analyze network', 'network insights', 'tell me about my network', 'what about my network', 'summarize my network'];
+            const isNetworkAnalysisQuery = networkAnalysisKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+
+            if (isNetworkAnalysisQuery && network.nodes.length > 0) {
+                // Perform network analysis
+                const networkData = {
+                    nodes: network.nodes,
+                    links: network.links
+                };
+                
+                let accumulatedText = '';
+                displayMessage('ai', 'Generating network analysis...'); // Initial message
+                
+                await api.streamNetworkAnalysis(
+                    networkData,
+                    (token) => {
+                        accumulatedText += token;
+                        // Update the last AI message with streamed content
+                        const lastAiMessage = document.getElementById('chatMessages').lastChild.querySelector('.message-bubble');
+                        if (lastAiMessage) {
+                            lastAiMessage.innerHTML = formatMarkdownToHtml(accumulatedText);
+                            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                        }
+                    },
+                    (finalText) => {
+                        aiResponse = finalText || accumulatedText;
+                        ui.showNotification('AI network analysis complete!', 'success');
+                    },
+                    (error) => {
+                        aiResponse = 'Streaming failed: ' + error.message;
+                        ui.showNotification('AI streaming failed: ' + error.message, 'error');
+                    }
+                );
+
+            } else if (isNetworkAnalysisQuery && network.nodes.length === 0) {
+                aiResponse = "I can't analyze the network because it's empty. Please add some movies first!";
+            } else {
+                // Regular chat message
+                const response = await api.sendChatMessage(chatHistory);
+                aiResponse = response.response;
+            }
 
             // Hide typing indicator
             hideTypingIndicator();
@@ -2405,7 +2269,11 @@ Always be helpful and provide detailed explanations for your recommendations.`
             extractedMovies = extractMoviesFromText(aiResponse);
             // --- End enhanced movie extraction ---
 
-            displayMessage('ai', aiResponse); // Pass raw response to displayMessage
+            // If it was a streaming response, the message is already displayed and updated.
+            // Otherwise, display the full response.
+            if (!isNetworkAnalysisQuery) {
+                displayMessage('ai', aiResponse);
+            }
 
             // Add "Add to Network" button if movies were extracted
             if (extractedMovies.length > 0) {
@@ -2499,7 +2367,10 @@ Always be helpful and provide detailed explanations for your recommendations.`
                 }
             }
 
-            chatHistory.push({ role: 'assistant', content: aiResponse });
+            // Only push to chatHistory if it was a regular chat message or the final streamed response
+            if (!isNetworkAnalysisQuery || (isNetworkAnalysisQuery && aiResponse)) {
+                chatHistory.push({ role: 'assistant', content: aiResponse });
+            }
 
             // Update stats
             updateChatStats();
@@ -2640,7 +2511,7 @@ Always be helpful and provide detailed explanations for your recommendations.`
     }
 
     setupGlobalEventListeners();
-    checkAIAvailability(); // Check if AI features are available
+    
 
     // Build Quick Help flyout
     (function setupQuickHelp(){
