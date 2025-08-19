@@ -1,13 +1,9 @@
-/**
- * Edge TTS Runner Script
- * Standalone script for Microsoft Edge TTS synthesis
- * Used by the TTS service via child process
- */
+
 import { EdgeTTS } from "@andresaya/edge-tts";
 import fs from 'fs';
+import path from 'path';
 
 async function main() {
-  // Parse arguments
   const args = process.argv.slice(2);
   let text = '';
   let voice = 'en-US-AriaNeural';
@@ -25,29 +21,30 @@ async function main() {
   }
 
   try {
-    console.log(`Running Edge TTS with voice: ${voice}`);
-    console.log(`Text: "${text.substring(0, 50)}..."`);
-    console.log(`Output file: ${outputFile}`);
-    
-    // Create TTS instance
-    const tts = new EdgeTTS();
-    
-    // Synthesize text
-    await tts.synthesize(text, voice, {
-      rate: "0%",
-      volume: "0%",
-      pitch: "0Hz"
+    const tts = new EdgeTTS({
+      trustedClientToken: "6A5AA1D4EAFF4E9FB37E23D68491D6F4",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "Sec-MS-GEC": "1.0",
+        "Sec-MS-GEC-Version": "1.0"
+      },
     });
     
-    console.log('Synthesis complete, exporting to file...');
+    const readableStream = await tts.synthesize(text, voice);
+    const outputFileMp3 = outputFile + '.mp3';
+    const fileStream = fs.createWriteStream(outputFileMp3);
     
-    // Export to file
-    await tts.toFile(outputFile);
+    readableStream.pipe(fileStream);
     
-    console.log('File export complete');
+    await new Promise((resolve, reject) => {
+      fileStream.on('finish', resolve);
+      fileStream.on('error', reject);
+    });
+
+    console.log('TTS synthesis to file stream finished.');
     process.exit(0);
   } catch (error) {
-    console.error('Edge TTS failed:', error.message);
+    console.error('Edge TTS synthesis failed:', error.message);
     process.exit(1);
   }
 }

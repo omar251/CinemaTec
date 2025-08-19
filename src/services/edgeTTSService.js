@@ -105,16 +105,12 @@ class EdgeTTSService {
   async ensureScriptExists() {
     const scriptPath = path.join(process.cwd(), 'scripts/tts/runEdgeTTS.mjs');
     
-    if (fs.existsSync(scriptPath)) {
-      return;
-    }
-
     const scriptContent = `
 import { EdgeTTS } from "@andresaya/edge-tts";
 import fs from 'fs';
+import path from 'path';
 
 async function main() {
-  // Parse arguments
   const args = process.argv.slice(2);
   let text = '';
   let voice = 'en-US-AriaNeural';
@@ -132,30 +128,40 @@ async function main() {
   }
 
   try {
-    // Create TTS instance
-    const tts = new EdgeTTS();
-    
-    // Synthesize text
-    await tts.synthesize(text, voice, {
-      rate: "0%",
-      volume: "0%",
-      pitch: "0Hz"
+    const tts = new EdgeTTS({
+      trustedClientToken: "6A5AA1D4EAFF4E9FB37E23D68491D6F4",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
+        "Sec-MS-GEC": "1.0",
+        "Sec-MS-GEC-Version": "1.0"
+      },
     });
     
-    // Export to file
-    await tts.toFile(outputFile);
+    const readableStream = await tts.synthesize(text, voice);
+    const outputFileMp3 = outputFile + '.mp3';
+    const fileStream = fs.createWriteStream(outputFileMp3);
+    
+    readableStream.pipe(fileStream);
+    
+    await new Promise((resolve, reject) => {
+      fileStream.on('finish', resolve);
+      fileStream.on('error', reject);
+    });
+
+    console.log('TTS synthesis to file stream finished.');
     process.exit(0);
   } catch (error) {
-    console.error('Edge TTS failed:', error.message);
+    console.error('Edge TTS synthesis failed:', error.message);
     process.exit(1);
   }
 }
 
 main();
 `;
-
+    // Ensure directory exists
+    fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
     fs.writeFileSync(scriptPath, scriptContent);
-    logger.info('Created Edge TTS runner script');
+    logger.info('Created/Updated Edge TTS runner script with new auth headers');
   }
 }
 

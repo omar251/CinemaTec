@@ -412,6 +412,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Help Modal
+        const helpBtn = document.getElementById('helpBtn');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const gotItBtn = document.getElementById('gotItBtn');
+
+        const openHelpModal = () => helpModal.style.display = 'flex';
+        const closeHelpModal = () => helpModal.style.display = 'none';
+
+        helpBtn.addEventListener('click', openHelpModal);
+        closeHelpBtn.addEventListener('click', closeHelpModal);
+        gotItBtn.addEventListener('click', closeHelpModal);
+
         
 
         // Initialize persistent chat sidebar

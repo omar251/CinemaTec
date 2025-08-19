@@ -115,6 +115,48 @@
             align-items: center;
         }
 
+        .control-group {
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+            border-radius: 15px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 10px;
+        }
+
+        .dropdown-content button {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+        }
+
+        .dropdown-content button:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
         .ai-provider-selector {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid var(--glass-border);
@@ -1510,17 +1552,28 @@
         </div>
         <div class="controls">
             <div class="stats" id="networkStats">0 movies, 0 connections</div>
-            <select class="ai-provider-selector" id="aiProviderSelector" title="Select AI Provider">
-                <option value="">🤖 Loading...</option>
-            </select>
-            <button class="control-btn" id="saveBtn">💾 Save</button>
-            <button class="control-btn" id="loadBtn">📁 Load</button>
-            <button class="control-btn" id="clearBtn">🗑️ Clear</button>
-            <button class="control-btn" id="centerBtn">🎯 Center</button>
-            <button class="control-btn" id="labelsBtn">🏷️ Labels</button>
-            <button class="control-btn" id="mouseNavBtn" title="Toggle mouse-edge navigation">🖱️ Mouse Nav</button>
-           <button class="control-btn" id="mouseNavSettingsBtn" title="Mouse navigation settings" aria-label="Mouse navigation settings">⚙️</button>
-           <button class="control-btn" id="helpBtn" title="Help and shortcuts" aria-label="Help and shortcuts">❓</button>
+            <div class="control-group">
+                <button class="control-btn" id="saveBtn" title="Save Network">💾</button>
+                <button class="control-btn" id="loadBtn" title="Load Network">📁</button>
+                <button class="control-btn" id="clearBtn" title="Clear Network">🗑️</button>
+            </div>
+            <div class="control-group">
+                <button class="control-btn" id="centerBtn" title="Center Network">🎯</button>
+                <button class="control-btn" id="labelsBtn" title="Toggle Labels">🏷️</button>
+                <div class="dropdown">
+                    <button class="control-btn" id="viewOptionsBtn" title="View Options">👁️</button>
+                    <div class="dropdown-content">
+                        <button class="control-btn" id="mouseNavBtn" title="Toggle mouse-edge navigation">🖱️ Mouse Nav</button>
+                        <button class="control-btn" id="mouseNavSettingsBtn" title="Mouse navigation settings">⚙️</button>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <select class="ai-provider-selector" id="aiProviderSelector" title="Select AI Provider">
+                    <option value="">🤖 Loading...</option>
+                </select>
+                <button class="control-btn" id="helpBtn" title="Help and shortcuts">❓</button>
+            </div>
         </div>
         
         <!-- Integrated Color Mode & Legend Sidebar -->
@@ -1818,18 +1871,38 @@
 
     <div class="notification" id="notification"></div>
 
-    <div class="help-panel">
-        <h4>💡 How to Use</h4>
-        <ul>
-            <li>🔍 Search and add movies</li>
-            <li>🖱️ Click nodes to expand</li>
-            <li>🖱️ Drag nodes to rearrange</li>
-            <li>🖱️ Scroll to zoom</li>
-            <li>🖱️ Hover for details</li>
-        </ul>
-    </div>
-
     <div class="tooltip" id="tooltip" style="display: none;" role="tooltip" aria-live="polite"></div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💡 Help & Shortcuts</h3>
+                <button class="close-btn" id="closeHelpBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4>How to Use</h4>
+                <ul>
+                    <li><b>Search:</b> Find movies to add to your network.</li>
+                    <li><b>Expand Nodes:</b> Double-click or Ctrl+click a movie node to load related movies.</li>
+                    <li><b>Rearrange:</b> Drag nodes to organize your network.</li>
+                    <li><b>Zoom:</b> Use your mouse scroll wheel to zoom in and out.</li>
+                    <li><b>Details:</b> Hover over a movie node to see quick details.</li>
+                    <li><b>Pan:</b> Click and drag the background to move the entire network.</li>
+                </ul>
+                <h4>Keyboard Shortcuts</h4>
+                <ul>
+                    <li><b>L:</b> Toggle movie labels on/off.</li>
+                    <li><b>C:</b> Center the network view.</li>
+                    <li><b>S:</b> Open the Save Network dialog.</li>
+                    <li><b>O:</b> Open the Load Network dialog.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="control-btn" id="gotItBtn">Got it</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Save Dialog -->
     <div class="modal" id="saveModal" style="display: none;">
