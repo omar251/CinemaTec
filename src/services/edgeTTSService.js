@@ -17,86 +17,43 @@ class EdgeTTSService {
   }
 
   /**
-   * Synthesize text to speech using Edge TTS via a child process
+   * Synthesize text to speech - returns a signal to use browser TTS instead
    * @param {string} text - Text to synthesize
    * @param {string} voice - Voice to use
-   * @returns {Promise<Buffer>} - Audio buffer
+   * @returns {Promise<Buffer>} - Audio buffer or browser TTS signal
    */
   async synthesizeText(text, voice = 'en-US-AriaNeural') {
     if (!text || text.trim().length === 0) {
       throw new Error('Text is required for synthesis');
     }
 
-    // Create a unique output filename
-    const hash = crypto.createHash('md5').update(text + voice).digest('hex');
-    const outputFile = path.join(process.cwd(), `edge_tts_${hash}`);
-    const scriptPath = path.join(process.cwd(), 'scripts/tts/runEdgeTTS.mjs');
+    // Since Edge TTS is having authentication issues, we'll signal the client
+    // to use browser-based Web Speech API instead
+    logger.info(`🎵 Edge TTS unavailable (403 error), signaling browser TTS fallback for: "${text.substring(0, 50)}..."`);
     
-    // Create the script if it doesn't exist
-    await this.ensureScriptExists();
-
-    return new Promise((resolve, reject) => {
-      // Run the Edge TTS script as a child process
-      logger.info(`Running Edge TTS for text: "${text.substring(0, 50)}..." with voice: ${voice}`);
-      logger.info(`Script path: ${scriptPath}`);
-      logger.info(`Output file: ${outputFile}`);
-      
-      // Check if script exists
-      if (!fs.existsSync(scriptPath)) {
-        logger.error(`Edge TTS script not found at: ${scriptPath}`);
-        return reject(new Error(`Edge TTS script not found at: ${scriptPath}`));
-      }
-      
-      const child = spawn('node', [
-        scriptPath,
-        '--text', text,
-        '--voice', voice,
-        '--output', outputFile
-      ]);
-
-      let stdout = '';
-      let stderr = '';
-      
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-        logger.info(`Edge TTS stdout: ${data.toString().trim()}`);
-      });
-      
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-        logger.error(`Edge TTS stderr: ${data.toString().trim()}`);
-      });
-
-      child.on('close', async (code) => {
-        if (code !== 0) {
-          logger.error(`Edge TTS process failed with code ${code}: ${stderr}`);
-          return reject(new Error(`Edge TTS failed: ${stderr}`));
-        }
-
-        // Check for the output file
-        const possibleFiles = [
-          `${outputFile}.mp3`,
-          `${outputFile}.wav`,
-          outputFile
-        ];
-
-        for (const file of possibleFiles) {
-          if (fs.existsSync(file)) {
-            try {
-              const audioBuffer = fs.readFileSync(file);
-              fs.unlinkSync(file); // Clean up
-              logger.info(`Edge TTS successful: ${file}, size: ${audioBuffer.length}`);
-              return resolve(audioBuffer);
-            } catch (error) {
-              logger.error(`Error reading audio file: ${error.message}`);
-              return reject(error);
-            }
-          }
-        }
-
-        reject(new Error('Edge TTS did not generate an audio file'));
-      });
+    // Return a special signal that tells the client to use browser TTS
+    const browserTTSSignal = JSON.stringify({
+      useBrowserTTS: true,
+      text: text,
+      movieTitle: "Movie Overview", // Add this for compatibility
+      voice: this.mapVoiceToBrowser(voice)
     });
+    
+    return Buffer.from(browserTTSSignal, 'utf8');
+  }
+
+  /**
+   * Map Edge TTS voice names to browser-compatible voice names
+   */
+  mapVoiceToBrowser(edgeVoice) {
+    const voiceMap = {
+      'en-US-AriaNeural': 'Microsoft Aria Online (Natural) - English (United States)',
+      'en-US-GuyNeural': 'Microsoft Guy Online (Natural) - English (United States)',
+      'en-GB-SoniaNeural': 'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+      'en-AU-NatashaNeural': 'Microsoft Natasha Online (Natural) - English (Australia)'
+    };
+    
+    return voiceMap[edgeVoice] || 'default';
   }
 
   /**
